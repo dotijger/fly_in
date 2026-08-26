@@ -1,0 +1,37 @@
+MYPY_FLAGS= --warn-return-any \
+						--warn-unused-ignores \
+						--ignore-missing-imports \
+						--disallow-untyped-defs \
+						--check-untyped-defs
+SRC_DIR= src
+
+all: run
+
+install:
+	uv sync
+
+help:
+	uv run python3 -m $(SRC_DIR) -help
+
+run:
+	uv run python3 -m $(SRC_DIR)
+
+visual:
+	uv run python3 -m $(SRC_DIR) --visual
+
+debug:
+	uv run python3 -m pdb -m $(SRC_DIR)
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	rm -rf .mypy_cache .pytest_cache
+	rm log
+
+lint:
+	uv run flake8 src
+	uv run mypy src $(MYPY_FLAGS)
+
+lint-strict:
+	uv run flake8 src
+	uv run mypy src --strict
+
