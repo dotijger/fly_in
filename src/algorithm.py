@@ -23,17 +23,21 @@ class PathFinder(BaseModel):
         path = []
         while current != end:
             path.append(current.name)
-            next = self._find_best_connection(current)
+            next = self._find_best_connection(current, path)
+            if next is None:
+                raise PathError(f"No neighbor found for '{current.name}'")
             turns += self._get_cost(next)
             current = next
         path.append(end.name)
         return path
 
-    def _find_connections(self, zone: Zone) -> list[tuple[Zone, int]]:
+    def _find_connections(self, zone: Zone, path: list[str]) -> list[tuple[Zone, int]]:
         connections = []
         for connection in self.map["connections"]:
             neighbor = connection.other(zone)
             if neighbor is not None:
+                if neighbor.name in path:
+                    continue
                 cost = self._get_cost(neighbor)
                 if cost == -1:
                     continue
@@ -41,11 +45,15 @@ class PathFinder(BaseModel):
                     connections.append((neighbor, cost))
         return connections
 
-    def _find_best_connection(self, zone: Zone) -> Zone:
-        connections = self._find_connections(zone)
+    def _find_best_connection(self, zone: Zone, path: list[str]) -> Zone | None:
+        connections = self._find_connections(zone, path)
+        if len(connections) == 0:
+            return None
         cost = 5
         names: list[Zone] = []
         for connection in connections:
+            if connection[0].kind == -1:
+                return connection[0]
             if connection[1] < cost:
                 cost = connection[1]
                 names.insert(0, connection[0])
