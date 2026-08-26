@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, TypedDict
 from pydantic import BaseModel, model_validator
 from enum import Enum
 
@@ -31,6 +31,12 @@ class AnsiColor(Enum):
     GOLD = "\033[38;5;220m"
 
 
+class MapDict(TypedDict):
+    nb_drones: int
+    zones: list[Zone]
+    connections: list[Connection]
+
+
 class ZoneType(Enum):
     NORMAL = 0
     PRIORITY = 1
@@ -39,10 +45,11 @@ class ZoneType(Enum):
 
 
 class Zone(BaseModel):
+    kind: int
     name: str
     x: int
     y: int
-    metadata: str | None = None
+    metadata: list[str] | None = None
     color: str | None = None
     max_drones: int = 1
     zone_type: str = "normal"
@@ -60,13 +67,14 @@ class Zone(BaseModel):
     def _extract_metadata(self) -> None:
         if self.metadata is None:
             return
-        self.metadata = self.metadata.lstrip("[")
-        self.metadata = self.metadata.rstrip("]")
-        data = self.metadata.split()
+        meta_string = " ".join(self.metadata)
+        meta_string = meta_string.lstrip("[")
+        meta_string = meta_string.rstrip("]")
+        data = meta_string.split()
         for attribute in data:
             if attribute.startswith("color="):
                 self.color = attribute.removeprefix("color=").strip()
-            if attribute.startswith("max_drones="):
+            elif attribute.startswith("max_drones="):
                 try:
                     self.max_drones = int(attribute.removeprefix("max_drones=").strip())
                 except ValueError:
@@ -75,7 +83,7 @@ class Zone(BaseModel):
                     raise ValueError(
                         f"Max drones of zone {self.name} cannot be negative."
                     )
-            if attribute.startswith("zone="):
+            elif attribute.startswith("zone="):
                 self.zone_type = attribute.removeprefix("zone=").strip()
                 types = ["normal", "priority", "restricted", "blocked"]
                 if self.zone_type not in types:
@@ -89,7 +97,9 @@ class Connection(BaseModel):
     b: Zone
     max_link_capacity: int = 1
 
-    def other(self, place: Zone) -> Zone:
+    def other(self, place: Zone) -> Zone | None:
+        if place != self.a and place != self.b:
+            return None
         return self.b if place == self.a else self.a
 
 

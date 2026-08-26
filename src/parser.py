@@ -1,16 +1,8 @@
 from pathlib import Path
-from src.classes import Zone, Connection, Simulation
+from src.classes import Zone, Connection, MapDict
 from src.error import ParseError
 from pydantic import BaseModel
-from typing import TypedDict
 import sys
-import argparse
-
-
-class MapDict(TypedDict):
-    nb_drones: int
-    zones: list[Zone]
-    connections: list[Connection]
 
 
 class Parser(BaseModel):
@@ -46,6 +38,11 @@ class Parser(BaseModel):
                 or line.startswith("start_hub:")
                 or line.startswith("end_hub:")
             ):
+                start = 0
+                if line.startswith("end_hub:"):
+                    start = -1
+                elif line.startswith("start_hub:"):
+                    start = 1
                 hub_data = line.split()
                 metadata = False
                 if len(hub_data) > 4:
@@ -53,13 +50,19 @@ class Parser(BaseModel):
                 try:
                     if metadata:
                         new_hub = Zone(
+                            kind=start,
                             name=hub_data[1],
                             x=int(hub_data[2]),
                             y=int(hub_data[3]),
-                            metadata=hub_data[4],
+                            metadata=hub_data[4:],
                         )
                     else:
-                        new_hub = Zone(name=hub_data[1], x=hub_data[2], y=hub_data[3])
+                        new_hub = Zone(
+                            kind=start,
+                            name=hub_data[1],
+                            x=int(hub_data[2]),
+                            y=int(hub_data[3]),
+                        )
                     zones.append(new_hub)
                     zone_names.append(hub_data[1])
                 except ValueError as e:
@@ -116,28 +119,28 @@ class Parser(BaseModel):
             "connections": connections,
         }
 
-    def print(self, maps: list[MapDict]) -> None:
-        for data in maps:
-            print(f"nb_drones: {data['nb_drones']}")
-            print("\nZones:")
-            for zone in data["zones"]:
-                print(
-                    f"  {zone.name:<12} ({zone.x},{zone.y})  "
-                    f"type={zone.zone_type:<10} color={zone.color}  "
-                    f"max_drones={zone.max_drones}"
-                )
-            print("\nConnections:")
-            for conn in data["connections"]:
-                print(
-                    f"  {conn.a.name} <-> {conn.b.name}  (capacity={conn.max_link_capacity})"
-                )
+    def print(self, map: MapDict) -> None:
+        print(f"nb_drones: {map['nb_drones']}")
+        print("\nZones:")
+        for zone in map["zones"]:
+            print(
+                f"  {zone.name:<12} ({zone.x},{zone.y})  "
+                f"type={zone.zone_type:<10} color={zone.color}  "
+                f"max_drones={zone.max_drones}"
+            )
+        print("\nConnections:")
+        for conn in map["connections"]:
+            print(
+                f"  {conn.a.name} <-> {conn.b.name}  (capacity={conn.max_link_capacity})"
+            )
 
 
 if __name__ == "__main__":
     parse = Parser(input=Path("maps"))
     try:
         maps = parse._import_maps()
-        parse.print(maps)
+        for map in maps:
+            parse.print(map)
     except (ParseError, ValueError) as e:
         print(e)
         sys.exit(1)
