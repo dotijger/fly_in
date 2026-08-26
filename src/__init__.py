@@ -1,2 +1,2 @@
 from pydantic import BaseModel
-from src.error import ParseError, 
+from src.error import ParseError

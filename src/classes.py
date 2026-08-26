@@ -1,4 +1,5 @@
 from typing import Self
+from pydantic import BaseModel, model_validator
 from enum import Enum
 
 
@@ -38,25 +39,58 @@ class ZoneType(Enum):
 
 
 class Zone(BaseModel):
-    coordinates: tuple[int, int] = ()
-    color: str = ""
-    name: str = ""
+    name: str
+    x: int
+    y: int
+    metadata: str | None = None
+    color: str | None = None
     max_drones: int = 1
+    zone_type: str = "normal"
 
     @model_validator(mode="after")
     def check(self) -> Self:
-        x, y = self.coordinates
-        if x < 0 or y < 0:
-            raise ValueError(f"Coordinates of zone {self.name} cannot be negative.")
-        if self.max_drones < 0:
-            raise ValueError(f"Max drones of zone {self.name} cannot be negative.")
-        return Self
+        if self.metadata is not None:
+            self._extract_metadata()
+        if "-" in self.name:
+            raise ValueError(
+                f"{self.name} is invalid, zone names cannot contain dashes."
+            )
+        return self
+
+    def _extract_metadata(self) -> None:
+        if self.metadata is None:
+            return
+        self.metadata = self.metadata.lstrip("[")
+        self.metadata = self.metadata.rstrip("]")
+        data = self.metadata.split()
+        for attribute in data:
+            if attribute.startswith("color="):
+                self.color = attribute.removeprefix("color=").strip()
+            if attribute.startswith("max_drones="):
+                try:
+                    self.max_drones = int(attribute.removeprefix("max_drones=").strip())
+                except ValueError:
+                    raise ValueError(f"Max drones in {self.name} is not an integer.")
+                if self.max_drones < 0:
+                    raise ValueError(
+                        f"Max drones of zone {self.name} cannot be negative."
+                    )
+            if attribute.startswith("zone="):
+                self.zone_type = attribute.removeprefix("zone=").strip()
+                types = ["normal", "priority", "restricted", "blocked"]
+                if self.zone_type not in types:
+                    raise ValueError(
+                        f"Zone type of zone {self.name} is not a valid zone type."
+                    )
 
 
 class Connection(BaseModel):
-    max_link_capacity: int = -1
+    a: Zone
+    b: Zone
+    max_link_capacity: int = 1
 
-    pass
+    def other(self, place: Zone) -> Zone:
+        return self.b if place == self.a else self.a
 
 
 class Simulation(BaseModel):
