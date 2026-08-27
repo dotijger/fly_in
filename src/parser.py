@@ -72,7 +72,9 @@ class Parser(BaseModel):
                     sys.exit(1)
                 set_names = set(zone_names)
                 if len(zone_names) != len(set_names):
-                    raise ValueError(f"Hub names in map {str(loc)} are not unique.")
+                    raise ValueError(
+                        f"Hub names in map {str(loc)} are not unique."
+                    )
             if line.startswith("connection:"):
                 connection_raw = line.removeprefix("connection: ").strip()
                 connection_data = connection_raw.split("-")
@@ -106,14 +108,19 @@ class Parser(BaseModel):
                         i += 1
                 try:
                     connection = Connection(
-                        a=zone_ab[0], b=zone_ab[1], max_link_capacity=max_link_capacity
+                        a=zone_ab[0],
+                        b=zone_ab[1],
+                        max_link_capacity=max_link_capacity,
                     )
                     connections.append(connection)
                 except ValueError as e:
                     print(
                         f"Fault connection data: {e.errors()[0]['msg']} Found in {str(loc)}."
                     )
+        path_to_str = str(loc)
+        sliced = path_to_str.split("/")
         return {
+            "map_name": sliced[-1],
             "nb_drones": nb_drones,
             "zones": zones,
             "connections": connections,
