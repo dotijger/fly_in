@@ -1,5 +1,5 @@
 from pathlib import Path
-from src.classes import Zone, Connection, MapDict
+from src.classes import Zone, Connection, Network
 from src.error import ParseError
 from pydantic import BaseModel
 import sys
@@ -8,7 +8,7 @@ import sys
 class Parser(BaseModel):
     input: Path
 
-    def _import_maps(self) -> list[MapDict]:
+    def _import_maps(self) -> list[Network]:
         maps = []
         maps_tbr = list(self.input.rglob("*.txt"))
         if len(maps_tbr) > 1:
@@ -16,7 +16,7 @@ class Parser(BaseModel):
                 maps.append(self._read_map(path))
         return maps
 
-    def _read_map(self, loc: Path) -> MapDict:
+    def _read_map(self, loc: Path) -> Network:
         with open(loc, "r") as file:
             raw_text = file.readlines()
         nb_drones = 0
@@ -119,24 +119,24 @@ class Parser(BaseModel):
                     )
         path_to_str = str(loc)
         sliced = path_to_str.split("/")
-        return {
-            "map_name": sliced[-1],
-            "nb_drones": nb_drones,
-            "zones": zones,
-            "connections": connections,
-        }
+        return Network(
+            name=sliced[-1],
+            nb_drones=nb_drones,
+            zones=zones,
+            connections=connections,
+        )
 
-    def print(self, map: MapDict) -> None:
-        print(f"nb_drones: {map['nb_drones']}")
+    def print(self, network: Network) -> None:
+        print(f"nb_drones: '{network.nb_drones}'")
         print("\nZones:")
-        for zone in map["zones"]:
+        for zone in network.zones:
             print(
                 f"  {zone.name:<12} ({zone.x},{zone.y})  "
                 f"type={zone.zone_type:<10} color={zone.color}  "
                 f"max_drones={zone.max_drones}"
             )
         print("\nConnections:")
-        for conn in map["connections"]:
+        for conn in network.connections:
             print(
                 f"  {conn.a.name} <-> {conn.b.name}  (capacity={conn.max_link_capacity})"
             )

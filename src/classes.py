@@ -1,6 +1,6 @@
 from typing import Self, TypedDict
 from pydantic import BaseModel, model_validator
-from enum import Enum
+from enum import Enum, auto
 
 
 class AnsiColor(Enum):
@@ -32,10 +32,10 @@ class AnsiColor(Enum):
 
 
 class ZoneType(Enum):
-    NORMAL = 0
-    PRIORITY = 1
-    RESTRICTED = 2
-    BLOCKED = 3
+    NORMAL = auto()
+    PRIORITY = auto()
+    RESTRICTED = auto()
+    BLOCKED = auto()
 
 
 class Zone(BaseModel):
@@ -129,7 +129,7 @@ class Drone(BaseModel):
         return self.remaining_path[0] if self.remaining_path else None
 
     def start_transit(self, connection: Connection, cost: int) -> None:
-        self.transit_turns_left = cost
+        self.transit_turns_left = cost - 1
         self.transit_connection = connection
         self.status = DroneStatus.IN_TRANSIT
 
@@ -152,6 +152,13 @@ class Record(BaseModel):
         return " ".join(
             f"{m.drone_id}-{m.destination}" for m in self.movements
         )
+
+
+class Network(BaseModel):
+    name: str
+    nb_drones: int
+    zones: list[Zone]
+    connections: list[Connection]
 
 
 class MapDict(TypedDict):

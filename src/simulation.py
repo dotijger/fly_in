@@ -1,4 +1,4 @@
-from src.classes import MapDict, Zone, Connection, Drone, Record, DroneStatus
+from src.classes import Network, Zone, Connection, Drone, Record, DroneStatus
 from src.error import SimulationError
 from pydantic import BaseModel
 from src.algorithm import PathFinder
@@ -7,7 +7,7 @@ from src.resolver import TurnResolver
 
 
 class Simulation(BaseModel):
-    map: MapDict
+    map: Network
     logger: Logger
     zone_by_name: dict[str, Zone] = {}
     connection_by_name: dict[tuple[str, str], Connection] = {}
@@ -17,11 +17,11 @@ class Simulation(BaseModel):
 
     def _setup(self):
         start_hub = None
-        for zone in self.map["zones"]:
+        for zone in self.map.zones:
             if zone.kind == 1:
                 start_hub = zone
             self.zone_by_name[zone.name] = zone
-        for connection in self.map["connections"]:
+        for connection in self.map.connections:
             a, b = connection.name.strip("<>").split("-")
             self.connection_by_name[(a, b)] = connection
         pathfinder = PathFinder(map=self.map)
@@ -31,7 +31,7 @@ class Simulation(BaseModel):
             raise SimulationError(
                 "No start hub identified, aborting simulation."
             )
-        amount = self.map["nb_drones"]
+        amount = self.map.nb_drones
         for i in range(amount):
             drone_id = "D" + str(i + 1)
             self.drones.append(
@@ -51,7 +51,7 @@ class Simulation(BaseModel):
             unpacked.append(zone)
         return unpacked
 
-    def run(self) -> None:
+    def run(self) -> list[Record]:
         self._setup()
         resolver = TurnResolver(
             zone_by_name=self.zone_by_name,
@@ -68,3 +68,4 @@ class Simulation(BaseModel):
             ]
             i += 1
         print(f"All drones have succesfully arrived in {i} TURNS")
+        return self.log

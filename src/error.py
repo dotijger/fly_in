@@ -44,3 +44,19 @@ class SimulationError(Exception):
             msg (str): Message to display if the error happens
         """
         super().__init__(f"ParseError: {msg}")
+
+
+class VisualizationError(Exception):
+    """Shows errors related to a visualization issue
+
+    Args:
+        BaseException: base exception class.
+    """
+
+    def __init__(self, msg: str) -> None:
+        """Creates a visualization error
+
+        Args:
+            msg (str): Message to display if the error happens
+        """
+        super().__init__(f"VisualizationError: {msg}")

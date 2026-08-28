@@ -56,6 +56,7 @@ class TurnResolver(BaseModel):
             if next.kind == -1:
                 d.status = DroneStatus.ARRIVED
 
+        # not used because this happens in the proposed part, in the if type == restriced (!), but if cost > 2, then it will be used!
         in_transit = [d for d in in_transit_drones if d.transit_turns_left > 1]
         for d in in_transit:
             d.transit_turns_left -= 1
@@ -102,10 +103,9 @@ class TurnResolver(BaseModel):
                 )
                 available_link[next_connection.name] -= 1
                 available_hub[d.current.name] += 1
-                available_hub[next.name] -= 1
                 d.remaining_path.pop(0)
                 record.movements.append(
-                    Movement(drone_id=d.id, destination=next.name)
+                    Movement(drone_id=d.id, destination=next_connection.name)
                 )
             else:
                 available_link[next_connection.name] -= 1
