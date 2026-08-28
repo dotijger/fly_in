@@ -53,6 +53,8 @@ class TurnResolver(BaseModel):
             available_link[d.transit_connection.name] -= 1
             d.stop_transit()
             d.current = next
+            if next.kind == -1:
+                d.status = DroneStatus.ARRIVED
 
         in_transit = [d for d in in_transit_drones if d.transit_turns_left > 1]
         for d in in_transit:
@@ -74,13 +76,23 @@ class TurnResolver(BaseModel):
             next = d.next_hub()
             if next is None:
                 raise SimulationError(
-                    "Active labeled drone has no remaining path, aborting."
+                    f"Active labeled drone {d.id} has no remaining path, aborting."
                 )
             if available_hub[next.name] <= 0:
                 continue
-            next_connection = self.connection_by_name[
-                (d.current.name, next.name)
-            ]
+            try:
+                next_connection = self.connection_by_name[
+                    (d.current.name, next.name)
+                ]
+            except KeyError:
+                try:
+                    next_connection = self.connection_by_name[
+                        (next.name, d.current.name)
+                    ]
+                except KeyError:
+                    raise SimulationError(
+                        f"Connection between {d.current.name} and {next.name} not found, aborting."
+                    )
             if available_link[next_connection.name] == 0:
                 continue
             if next.zone_type == "restricted":
