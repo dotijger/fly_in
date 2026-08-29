@@ -79,17 +79,23 @@ class Visualizer(BaseModel):
         self.DEFAULT_COLOR = (curses.COLOR_WHITE, curses.A_NORMAL)
 
     def draw_menu(self, stdscr: curses.window) -> Screen:
-        options = ["start", "quit"]
+        options = ["quit", "start"]
         selected = 0
+        screen_height, screen_width = stdscr.getmaxyx()
+        center_y = screen_height // 2
+        center_x = screen_width // 2
 
         while True:
             stdscr.erase()
-            stdscr.addstr(1, 2, "fly-in by odschreu")
+            title = "fly-in by odschreu"
+            title_x = center_x - len(title) // 2
+            stdscr.addstr(center_y - 2, title_x, title, curses.A_BOLD)
             for i, label in enumerate(options):
                 attribute = (
                     curses.A_REVERSE if i == selected else curses.A_NORMAL
                 )
-                stdscr.addstr(3 + i, 4, f"[ {label} ]", attribute)
+                x = title_x + len(title) // 4
+                stdscr.addstr(center_y - i, x, f"[ {label} ]", attribute)
             stdscr.refresh()
 
             key = stdscr.getch()
@@ -98,7 +104,9 @@ class Visualizer(BaseModel):
             elif key == curses.KEY_DOWN:
                 selected = (selected + 1) % len(options)
             elif key in (curses.KEY_ENTER, 10, 13):
-                return Screen.MAP_SELECT if selected == 0 else Screen.QUIT
+                return Screen.MAP_SELECT if selected != 0 else Screen.QUIT
+            elif key in (27, ord("q")):
+                return Screen.QUIT
 
     def draw_map_select(self, stdscr: curses.window) -> Screen:
         map_options = []
@@ -108,14 +116,23 @@ class Visualizer(BaseModel):
             map_name[i] = sim
         map_options.append("quit")
         selected = 0
+        screen_height, screen_width = stdscr.getmaxyx()
+        center_y = screen_height // 2
+        center_x = screen_width // 2
+
+        start_y = center_y - (len(map_options) + 2) // 2
+
         while True:
             stdscr.erase()
-            stdscr.addstr(1, 2, "please select a map:")
+            title = "PLEASE SELECT A MAP:"
+            title_x = center_x - len(title) // 3
+            stdscr.addstr(start_y, title_x, title, curses.A_BOLD)
             for i, label in enumerate(map_options):
                 attribute = (
                     curses.A_REVERSE if i == selected else curses.A_NORMAL
                 )
-                stdscr.addstr(3 + i, 4, f"[ '{label}' ]", attribute)
+                x = center_x - len(label) // 2
+                stdscr.addstr(start_y + 1 + i, x, f"[ '{label}' ]", attribute)
             stdscr.refresh()
 
             key = stdscr.getch()
@@ -131,6 +148,10 @@ class Visualizer(BaseModel):
                     if selected != len(map_options) - 1
                     else Screen.QUIT
                 )
+            elif key == 27:
+                return Screen.QUIT
+            elif key == ord("q"):
+                return Screen.MENU
 
     def draw_viewer(
         self, stdscr: curses.window, map: Network, turns: list[Record]
@@ -151,7 +172,9 @@ class Visualizer(BaseModel):
             elif key == curses.KEY_LEFT:
                 id = max(id - 1, 0)
             elif key == ord("q"):
-                return Screen.MENU
+                return Screen.MAP_SELECT
+            elif key == 27:
+                return Screen.QUIT
 
     @staticmethod
     def compute_drawing_scale(
@@ -164,7 +187,8 @@ class Visualizer(BaseModel):
         max_y, min_y = max(ys), min(ys)
 
         margin_top, margin_bottom = 4, 4
-        usable_width = screen_width - 4
+        margin_left, margin_right = 4, 10
+        usable_width = screen_width - margin_left - margin_right
         usable_height = screen_height - margin_top - margin_bottom
 
         use_x = max(max_x - min_x, 1)
@@ -183,12 +207,48 @@ class Visualizer(BaseModel):
         row = int((max_y - y) * scale_y) + 4
         return row, col
 
+    # parametric interpolation position[i] = start + (end - start) * (i / n)
+    def draw_line(
+        self, stdscr: curses.window, ya: int, xa: int, yb: int, xb: int
+    ) -> None:
+        steps = max(abs(xb - xa), abs(yb - ya), 1) // 2
+        with open("/tmp/debug.log", "a") as f:
+            f.write(
+                f"draw_line ya={ya} xa={xa} yb={yb} xb={yb} steps={steps}\n"
+            )
+        for i in range(1, steps):
+            y = ya + (yb - ya) * i // steps
+            x = xa + (xb - xa) * i // steps
+            try:
+                char = (
+                    "|"
+                    if xa == xb
+                    else (
+                        "-"
+                        if ya == yb
+                        else ("\\" if (xb - xa) * (yb - ya) > 0 else "/")
+                    )
+                )
+                stdscr.addstr(y, x, char)
+            except curses.error as e:
+                with open("/tmp/debug.log", "a") as f:
+                    f.write(f" FAILED at y={y} x={x}: {e}\n")
+                pass
+
     # addstr(row, col, text, attribute) (row = y, col = x)
     def draw_network(self, stdscr: curses.window, map: Network) -> None:
         scale_x, scale_y, min_x, max_x, min_y, max_y = (
             self.compute_drawing_scale(stdscr, map)
         )
 
+        for c in map.connections:
+            ya, xa = self.convert_to_screen(
+                c.a.x, c.a.y, scale_x, scale_y, min_x, max_y
+            )
+            yb, xb = self.convert_to_screen(
+                c.b.x, c.b.y, scale_x, scale_y, min_x, max_y
+            )
+            self.draw_line(stdscr, ya, xa, yb, xb)
         center = int((max_x - min_x) / 2)
         color, _ = self.DEFAULT_COLOR
         stdscr.addstr(1, center, f"{map.name}", color | curses.A_UNDERLINE)
@@ -203,11 +263,13 @@ class Visualizer(BaseModel):
                     z.color, self.DEFAULT_COLOR
                 )
             try:
+                stdscr.addstr(
+                    y - 1, x, "[hub]", curses.COLOR_WHITE | curses.A_BOLD
+                )
                 stdscr.addstr(y, x, f"{z.name}", color | attribute)
             except curses.error:
                 continue
 
-        for c in map.connections:
             pass
 
     def draw_drones(self, stdscr: curses.window, turn: Record) -> None:
