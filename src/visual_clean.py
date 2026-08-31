@@ -197,7 +197,7 @@ class Visualizer:
         vis: Self,
     ) -> Screen:
         id = 0
-        max_id = len(turns) - 1
+        max_id = len(turns)
         height, width = stdscr.getmaxyx()
         map_width = int(width * 0.65)
         log_width = width - map_width
@@ -301,10 +301,13 @@ class MapDrawer:
 
     def _draw_status_bar(self, turn_id: int) -> None:
         max_y, max_x = self._window.getmaxyx()
+        text = f"{turn_id}/{len(self._turns)}"
+        x = max(max_x - len(text) - 1, 0)
+        y = max_y - 1
         self._window.addstr(
-            max_y - 1,
-            max_x - 4,
-            f"{turn_id}/{len(self._turns) - 1}",
+            y,
+            x,
+            text,
             curses.A_BOLD,
         )
 
@@ -334,8 +337,8 @@ class MapDrawer:
         use_y = max(max_y - min_y, 1)
 
         for zone in self._zones.values():
-            x = (zone.x - min(xs)) / use_x
-            y = (zone.y - min(ys)) / use_y
+            x = (zone.x - min(xs)) / use_x * 0.8
+            y = (zone.y - min(ys)) / use_y * 0.8
             scaled_x = self.MARGIN + int(x * (usable_width - 1))
             scaled_y = self.MARGIN + int(y * (usable_height - 3))
             self._screen_position[zone.name] = (scaled_y, scaled_x)
