@@ -38,6 +38,12 @@ class ZoneType(Enum):
     BLOCKED = auto()
 
 
+class HubType(Enum):
+    START = "start_hub"
+    NORMAL = "hub"
+    END = "end_hub"
+
+
 class Zone(BaseModel):
     kind: int
     name: str

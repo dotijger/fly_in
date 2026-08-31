@@ -1,7 +1,7 @@
 from src.parser import Parser
 from src.logger import Logger
 from src.simulation import Simulation
-from src.visual import Visualizer
+from src.visual_clean import Visualizer
 from src.error import ParseError, PathError, SimulationError
 from pathlib import Path
 import sys

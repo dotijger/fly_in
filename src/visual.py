@@ -78,6 +78,14 @@ class Visualizer(BaseModel):
 
         self.DEFAULT_COLOR = (curses.COLOR_WHITE, curses.A_NORMAL)
 
+    def _safe_addch(
+        self, stdscr: curses.window, y: int, x: int, char: int
+    ) -> None:
+        try:
+            stdscr.addch(y, x, char)
+        except curses.error:
+            pass
+
     def draw_menu(self, stdscr: curses.window) -> Screen:
         options = ["quit", "start"]
         selected = 0
@@ -208,7 +216,7 @@ class Visualizer(BaseModel):
         return row, col
 
     # parametric interpolation position[i] = start + (end - start) * (i / n)
-    def draw_line(
+    def _draw_line_old(
         self, stdscr: curses.window, ya: int, xa: int, yb: int, xb: int
     ) -> None:
         steps = max(abs(xb - xa), abs(yb - ya), 1) // 2
@@ -235,6 +243,51 @@ class Visualizer(BaseModel):
                     f.write(f" FAILED at y={y} x={x}: {e}\n")
                 pass
 
+    def _draw_line(
+        self, stdscr: curses.window, ya: int, xa: int, yb: int, xb: int
+    ) -> None:
+        self._draw_vertical_line(stdscr, ya, xa, yb)
+        self._draw_horizontal_line(stdscr, xa, yb, xb)
+        self._draw_corner(stdscr, ya, xa, yb, xb)
+
+    def _draw_vertical_line(
+        self, stdscr: curses.window, ya: int, xa: int, yb: int
+    ) -> None:
+        if ya == yb:
+            return
+        step = 1 if yb > ya else -1
+        for y in range(ya + step, yb, step):
+            self._safe_addch(stdscr, y, xa, curses.ACS_VLINE)
+
+    def _draw_horizontal_line(
+        self, stdscr: curses.window, xa: int, yb: int, xb: int
+    ) -> None:
+        if xa == xb:
+            return
+        step = 1 if xb > xa else -1
+        for x in range(xa + step, xb, step):
+            self._safe_addch(stdscr, yb, x, curses.ACS_HLINE)
+
+    def _draw_corner(
+        self, stdscr: curses.window, ya: int, xa: int, yb: int, xb: int
+    ) -> None:
+        if ya == yb or xa == xb:
+            return
+
+        from_above = yb > ya
+        right_turn = xb > xa
+
+        if from_above and right_turn:
+            char = curses.ACS_LLCORNER
+        if not from_above and right_turn:
+            char = curses.ACS_ULCORNER
+        if from_above and not right_turn:
+            char = curses.ACS_LRCORNER
+        if not from_above and not right_turn:
+            char = curses.ACS_URCORNER
+
+        self._safe_addch(stdscr, yb, xa, char)
+
     # addstr(row, col, text, attribute) (row = y, col = x)
     def draw_network(self, stdscr: curses.window, map: Network) -> None:
         scale_x, scale_y, min_x, max_x, min_y, max_y = (
@@ -248,7 +301,7 @@ class Visualizer(BaseModel):
             yb, xb = self.convert_to_screen(
                 c.b.x, c.b.y, scale_x, scale_y, min_x, max_y
             )
-            self.draw_line(stdscr, ya, xa, yb, xb)
+            self._draw_line(stdscr, ya, xa, yb, xb)
         center = int((max_x - min_x) / 2)
         color, _ = self.DEFAULT_COLOR
         stdscr.addstr(1, center, f"{map.name}", color | curses.A_UNDERLINE)
