@@ -397,20 +397,33 @@ class MapDrawer:
             return "down" if oy > zy else "up"
         return "right" if ox > zx else "left"
 
+    @staticmethod
+    def _get_abbreviated_name(string: str) -> str:
+        separated = string.split("_")
+        final = ""
+        for s in separated:
+            final += s[0]
+        if separated[-1][-1].isnumeric():
+            final += separated[-1][-1]
+        return final
+
     # addstr(row, col, text, attribute) (row = y, col = x)
     def _draw_network(self) -> None:
         max_y, max_x = self._window.getmaxyx()
-        self._draw_connections()
-        center = int(max_x / 2)
-        self._window.addstr(1, center, f"{self._map.name}", curses.A_UNDERLINE)
+        # self._draw_connections()
         for z in self._map.zones:
             y, x = self._screen_position[z.name]
             if z.color is None:
                 id, attr = 0, curses.A_NORMAL
             else:
                 id, attr = self._vis.get_colors(z.color)
-            self._safe_addstr(y - 1, x, "[hub]", 0 | curses.A_BOLD)
-            self._safe_addstr(y, x, f"{z.name}", id | attr)
+                # self._safe_addstr(y - 1, x, "[h]", curses.color_pair(0) | curses.A_BOLD)
+            self._safe_addstr(
+                y,
+                x,
+                f"{self._get_abbreviated_name(z.name)}",
+                curses.color_pair(id) | attr,
+            )
 
     def _draw_connections(self) -> None:
         ports = self._compute_ports()
@@ -427,27 +440,57 @@ class MapDrawer:
         for c in self._connections:
             for zone, other in ((c.a, c.b), (c.b, c.a)):
                 direction = self._get_connection_direction(zone, other)
-                groups.setdefault((zone, direction), []).append(c)
+                groups.setdefault((zone.name, direction), []).append(c)
 
-        port_at: dict[tuple[Connection, Zone], tuple[int, int]] = {}
-        for (zone, direction), connections in groups.items():
-            yz, xz = self._screen_pos[zone]
+        port_at: dict[tuple[Connection, str], tuple[int, int]] = {}
+        for (zone_name, direction), connections in groups.items():
+            yz, xz = self._screen_position[zone_name]
             yd, xd = self.DIRECTION_STEP[direction]
             base_y, base_x = yz + yd, xz + xd
             start = -(len(connections) // 2)
             for i, c in enumerate(connections):
                 offset = start + i
                 if self.STACK_AXIS[direction] == "y":
-                    port_at[(c, zone)] = (base_y + offset, base_x)
+                    port_at[(c, zone_name)] = (base_y + offset, base_x)
                 else:
-                    port_at[(c, zone)] = (base_y, base_x + offset)
+                    port_at[(c, zone_name)] = (base_y, base_x + offset)
 
         return {
-            c: (*port_at[c, c.a], *port_at[c, c.b]) for c in self._connections
+            c: (*port_at[c, c.a.name], *port_at[c, c.b.name])
+            for c in self._connections
         }
 
     def _draw_drones(self, turn_id: int) -> None:
-        pass
+        movements: list[str] = []
+        drone_log: dict[str, str] = {}
+        start = "start"
+        for z in self._map.zones:
+            if z.kind == 1:
+                start = z.name
+        for i in range(self._map.nb_drones):
+            drone_log[f"D{i + 1}"] = start
+        for turn in self._turns[:turn_id]:
+            movements.append(turn.get_records())
+        for moves in movements:
+            drone_moves = moves.split(" ")
+            for move in drone_moves:
+                drone_name, place = move.split("-")
+                if drone_log[drone_name] == place:
+                    continue
+                else:
+                    drone_log[drone_name] = place
+        used: dict[str, int] = {}
+        for drone, place in drone_log.items():
+            y, x = self._screen_position[place]
+            offset = used.get(place, 0)
+            used[place] = offset + 1
+            id, _ = self._vis.get_colors("blue")
+            self._safe_addstr(
+                y + 1 + offset,
+                x,
+                f"{drone}",
+                curses.color_pair(id) | curses.A_BOLD,
+            )
 
 
 if __name__ == "__main__":
