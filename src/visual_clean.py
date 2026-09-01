@@ -1,11 +1,11 @@
 import curses
 from src.simulation import Simulation
 from src.logger import Logger
-from src.classes import Record, Network, Zone
+from src.classes import Record, Network, Zone, Connection
 from src.error import VisualizationError
 from enum import Enum, auto
-from collections import deque
-from typing import Deque, Self
+from typing import Self
+import textwrap
 
 
 class Screen(Enum):
@@ -24,18 +24,6 @@ class Visualizer:
         self.map: list[Network] = []
         self.COLOR_MAP: dict[str, tuple[int, int]] = {}
         self.DEFAULT_COLOR: tuple[int, int] = (0, 0)
-        self.DIRECTION_STEP = {
-            "up": (-1, 0),
-            "down": (1, 0),
-            "left": (0, -1),
-            "right": (0, 1),
-        }
-        self.STACK_AXIS = {
-            "up": "x",
-            "down": "x",
-            "left": "y",
-            "right": "y",
-        }
 
     def run_visualization(self, stdscr: curses.window) -> None:
         curses.curs_set(0)
@@ -260,11 +248,21 @@ class LogDrawer:
             self._lines = []
             for i in range(id):
                 self._append_turn(i + 1, self._turns[i])
-            visible_lines = list(self._lines)
-            for i, line in enumerate(visible_lines, start=1):
-                attr = (
-                    curses.A_BOLD if i == len(visible_lines) else curses.A_DIM
-                )
+
+            _, max_width = self._window.getmaxyx()
+            wrap_width = max(max_width - 4, 10)
+
+            wrapped: list[tuple[str, bool]] = []
+            for i, line in enumerate(self._lines, start=1):
+                last = i == len(self._lines)
+                prefix = line.find(":") + 2
+                for part in textwrap.wrap(
+                    line, width=wrap_width, subsequent_indent=" " * prefix
+                ):
+                    wrapped.append((part, last))
+            visible_lines = wrapped[-self._max_lines :]
+            for i, (line, last) in enumerate(visible_lines, start=1):
+                attr = curses.A_BOLD if last else curses.A_DIM
                 self._safe_addstr(i, 2, line, attr)
 
         self._window.noutrefresh()
@@ -286,6 +284,18 @@ class MapDrawer:
         self._turns = turns
         self._screen_position: dict[str, tuple[int, int]] = {}
         self.MARGIN = 2
+        self.DIRECTION_STEP = {
+            "up": (-1, 0),
+            "down": (1, 0),
+            "left": (0, -1),
+            "right": (0, 1),
+        }
+        self.STACK_AXIS = {
+            "up": "x",
+            "down": "x",
+            "left": "y",
+            "right": "y",
+        }
         self._compute_drawing_layout()
 
     def render(self, turn_id: int) -> None:
@@ -387,16 +397,10 @@ class MapDrawer:
             return "down" if oy > zy else "up"
         return "right" if ox > zx else "left"
 
-    def _draw_ports(self) -> None:
-        pass
-
     # addstr(row, col, text, attribute) (row = y, col = x)
     def _draw_network(self) -> None:
         max_y, max_x = self._window.getmaxyx()
-        for c in self._map.connections:
-            ya, xa = self._screen_position[c.a.name]
-            yb, xb = self._screen_position[c.b.name]
-            self._draw_line(ya, xa, yb, xb)
+        self._draw_connections()
         center = int(max_x / 2)
         self._window.addstr(1, center, f"{self._map.name}", curses.A_UNDERLINE)
         for z in self._map.zones:
@@ -407,6 +411,40 @@ class MapDrawer:
                 id, attr = self._vis.get_colors(z.color)
             self._safe_addstr(y - 1, x, "[hub]", 0 | curses.A_BOLD)
             self._safe_addstr(y, x, f"{z.name}", id | attr)
+
+    def _draw_connections(self) -> None:
+        ports = self._compute_ports()
+        occupied: dict[tuple[int, int], int] = {}
+        for c in self._connections:
+            ya, xa, yb, xb = ports[c]
+            color = vis._color_for(c)
+            self._safe_addch(ya, xa, curses.ACS_BLOCK, color)
+            self._safe_addch(yb, xb, curses.ACS_BLOCK, color)
+            self._draw_line(ya, xa, yb, xb, occupied, color)
+
+    def _compute_ports(self) -> dict[Connection, tuple[int, int, int, int]]:
+        groups: dict[tuple[str, str], list[Connection]] = {}
+        for c in self._connections:
+            for zone, other in ((c.a, c.b), (c.b, c.a)):
+                direction = self._get_connection_direction(zone, other)
+                groups.setdefault((zone, direction), []).append(c)
+
+        port_at: dict[tuple[Connection, Zone], tuple[int, int]] = {}
+        for (zone, direction), connections in groups.items():
+            yz, xz = self._screen_pos[zone]
+            yd, xd = self.DIRECTION_STEP[direction]
+            base_y, base_x = yz + yd, xz + xd
+            start = -(len(connections) // 2)
+            for i, c in enumerate(connections):
+                offset = start + i
+                if self.STACK_AXIS[direction] == "y":
+                    port_at[(c, zone)] = (base_y + offset, base_x)
+                else:
+                    port_at[(c, zone)] = (base_y, base_x + offset)
+
+        return {
+            c: (*port_at[c, c.a], *port_at[c, c.b]) for c in self._connections
+        }
 
     def _draw_drones(self, turn_id: int) -> None:
         pass
