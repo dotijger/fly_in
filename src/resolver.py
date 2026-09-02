@@ -16,7 +16,7 @@ class TurnResolver(BaseModel):
         proposing_drones = [
             d for d in drones if d.status == DroneStatus.AT_ZONE
         ]
-        proposing_drones.sort(key=lambda d: d.id)
+        # proposing_drones.sort(key=lambda d: d.id)
 
         available_hub: dict[str, int] = {}
         for zone in self.zone_by_name.values():
