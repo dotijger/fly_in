@@ -216,29 +216,60 @@ class Visualizer:
         while True:
             key = stdscr.getch()
             if inspection:
-                con_drawer.render(selected[s_id])
+                if key == curses.KEY_DOWN:
+                    s_id = min(s_id + 1, max_selected)
+                    con_drawer.render(selected[s_id])
+                    log_drawer.render(id)
+                    map_drawer.render(id, selected[s_id])
+                    curses.doupdate()
+                if key == curses.KEY_UP:
+                    s_id = max(s_id - 1, 0)
+                    con_drawer.render(selected[s_id])
+                    log_drawer.render(id)
+                    map_drawer.render(id, selected[s_id])
+                    curses.doupdate()
+                if key == curses.KEY_RIGHT:
+                    id = min(id + 1, max_id)
+                    con_drawer.render(selected[s_id])
+                    log_drawer.render(id)
+                    map_drawer.render(id, selected[s_id])
+                    curses.doupdate()
+                elif key == curses.KEY_LEFT:
+                    id = max(id - 1, 0)
+                    con_drawer.render(selected[s_id])
+                    log_drawer.render(id)
+                    map_drawer.render(id, selected[s_id])
+                    curses.doupdate()
+                elif key == ord("i"):
+                    inspection = False
+                    con_drawer.render()
+                    log_drawer.render(id)
+                    map_drawer.render(id)
+                    curses.doupdate()
+                elif key == ord("q"):
+                    return Screen.MAP_SELECT
+                elif key == 27:
+                    return Screen.QUIT
             else:
-                con_drawer.render()
-            if key == curses.KEY_RIGHT:
-                id = min(id + 1, max_id)
-                log_drawer.render(id)
-                map_drawer.render(id)
-                curses.doupdate()
-            elif key == curses.KEY_LEFT:
-                id = max(id - 1, 0)
-                log_drawer.render(id)
-                map_drawer.render(id)
-                curses.doupdate()
-            elif key == ord("i"):
-                inspection = True
-                con_drawer.start()
-                con_drawer.render(selected[s_id])
-                log_drawer.render(id)
-                map_drawer.render(id)
-            elif key == ord("q"):
-                return Screen.MAP_SELECT
-            elif key == 27:
-                return Screen.QUIT
+                if key == curses.KEY_RIGHT:
+                    id = min(id + 1, max_id)
+                    log_drawer.render(id)
+                    map_drawer.render(id)
+                    curses.doupdate()
+                elif key == curses.KEY_LEFT:
+                    id = max(id - 1, 0)
+                    log_drawer.render(id)
+                    map_drawer.render(id)
+                    curses.doupdate()
+                elif key == ord("i"):
+                    inspection = True
+                    con_drawer.render(selected[s_id])
+                    log_drawer.render(id)
+                    map_drawer.render(id)
+                elif key == ord("q"):
+                    return Screen.MAP_SELECT
+                elif key == 27:
+                    return Screen.QUIT
 
     @staticmethod
     def _get_abbreviated_name(string: str) -> str:
@@ -388,12 +419,12 @@ class MapDrawer:
         }
         self._compute_drawing_layout()
 
-    def render(self, turn_id: int) -> None:
+    def render(self, turn_id: int, selected: str | None = None) -> None:
         self._window.erase()
         self._window.box()
         self._window.addstr(0, 2, f"[{self._map.name}]", curses.A_BOLD)
 
-        self._draw_network()
+        self._draw_network(selected)
         self._draw_drones(turn_id)
         self._draw_status_bar(turn_id)
 
@@ -488,15 +519,25 @@ class MapDrawer:
         return "right" if ox > zx else "left"
 
     # addstr(row, col, text, attribute) (row = y, col = x)
-    def _draw_network(self) -> None:
+    def _draw_network(self, selected: str | None = None) -> None:
         max_y, max_x = self._window.getmaxyx()
+        connections = []
+        if selected:
+            connections = self._get_connections(selected)
         # self._draw_connections()
         for z in self._map.zones:
             y, x = self._screen_position[z.name]
-            if z.color is None:
-                id, attr = 0, curses.A_NORMAL
+            if z.name == selected:
+                id, attr = self._vis.get_colors("blue")
+                attr = curses.A_NORMAL
+            elif z.name in connections:
+                id, attr = self._vis.get_colors("white")
+                attr = curses.A_BOLD
             else:
-                id, attr = self._vis.get_colors(z.color)
+                if z.color is None:
+                    id, attr = 0, curses.A_NORMAL
+                else:
+                    id, attr = self._vis.get_colors(z.color)
                 # self._safe_addstr(y - 1, x, "[h]", curses.color_pair(0) | curses.A_BOLD)
             self._safe_addstr(
                 y,
