@@ -188,9 +188,10 @@ class Visualizer:
         max_id = len(turns)
         if self.selected_map is None:
             return Screen.MAP_SELECT
-        selected = self._get_connections(self.selected_map.map)
-        s_id = 0
-        max_selected = len(selected)
+        zones = self._get_zones(map)
+        connections = self._get_connections(map)
+        z_id = 0
+        max_zones = len(zones) - 1
         height, width = stdscr.getmaxyx()
         map_width = int(width * 0.65)
         log_width = width - map_width
@@ -205,7 +206,7 @@ class Visualizer:
 
         log_drawer = LogDrawer(log_window, turns)
         map_drawer = MapDrawer(map_window, map, turns, vis)
-        con_drawer = ConDrawer(con_window, selected)
+        con_drawer = ConDrawer(con_window, connections, zones)
 
         con_drawer.render()
         log_drawer.render(id)
@@ -217,28 +218,28 @@ class Visualizer:
             key = stdscr.getch()
             if inspection:
                 if key == curses.KEY_DOWN:
-                    s_id = min(s_id + 1, max_selected)
-                    con_drawer.render(selected[s_id])
+                    z_id = min(z_id + 1, max_zones)
+                    con_drawer.render(zones[z_id])
                     log_drawer.render(id)
-                    map_drawer.render(id, selected[s_id])
+                    map_drawer.render(id, zones[z_id])
                     curses.doupdate()
                 if key == curses.KEY_UP:
-                    s_id = max(s_id - 1, 0)
-                    con_drawer.render(selected[s_id])
+                    z_id = max(z_id - 1, 0)
+                    con_drawer.render(zones[z_id])
                     log_drawer.render(id)
-                    map_drawer.render(id, selected[s_id])
+                    map_drawer.render(id, zones[z_id])
                     curses.doupdate()
                 if key == curses.KEY_RIGHT:
                     id = min(id + 1, max_id)
-                    con_drawer.render(selected[s_id])
+                    con_drawer.render(zones[z_id])
                     log_drawer.render(id)
-                    map_drawer.render(id, selected[s_id])
+                    map_drawer.render(id, zones[z_id])
                     curses.doupdate()
                 elif key == curses.KEY_LEFT:
                     id = max(id - 1, 0)
-                    con_drawer.render(selected[s_id])
+                    con_drawer.render(zones[z_id])
                     log_drawer.render(id)
-                    map_drawer.render(id, selected[s_id])
+                    map_drawer.render(id, zones[z_id])
                     curses.doupdate()
                 elif key == ord("i"):
                     inspection = False
@@ -263,9 +264,10 @@ class Visualizer:
                     curses.doupdate()
                 elif key == ord("i"):
                     inspection = True
-                    con_drawer.render(selected[s_id])
+                    con_drawer.render(zones[z_id])
                     log_drawer.render(id)
-                    map_drawer.render(id)
+                    map_drawer.render(id, zones[z_id])
+                    curses.doupdate()
                 elif key == ord("q"):
                     return Screen.MAP_SELECT
                 elif key == 27:
@@ -289,11 +291,20 @@ class Visualizer:
             )
         return cons
 
+    def _get_zones(self, map: Network) -> list[str]:
+        zones: list[str] = []
+        for z in map.zones:
+            zones.append(f"{self._get_abbreviated_name(z.name)} - [{z.name}]")
+        return zones
+
 
 class ConDrawer:
-    def __init__(self, window: curses.window, connections: list[str]) -> None:
+    def __init__(
+        self, window: curses.window, connections: list[str], zones: list[str]
+    ) -> None:
         self._window = window
-        self._connections = connections
+        self._connection_names = connections
+        self._zone_names = zones
         self._height, self._width = window.getmaxyx()
         self._max_lines = max(self._height - 2, 1)
 
@@ -310,12 +321,15 @@ class ConDrawer:
         self._window.erase()
         self._window.box()
         self._window.addstr(0, 2, "[ CONNECTIONS ]", curses.A_BOLD)
-        self._render_list_of_connections(selected)
+        if selected is None:
+            self._render_list_of_connections()
+        else:
+            self._render_list_of_zones(selected)
 
         self._window.noutrefresh()
 
     def _render_list_of_connections(self, selected: str | None = None) -> None:
-        con_amount = len(self._connections)
+        con_amount = len(self._connection_names)
         if con_amount == 0:
             return
 
@@ -323,20 +337,31 @@ class ConDrawer:
         columns = -(-con_amount // rows)
         col_width = self._width // columns + 2
 
-        for id, connection in enumerate(self._connections):
+        for id, connection in enumerate(self._connection_names):
             col = id // rows
             row = id % rows
-            if selected:
-                if connection == selected:
-                    self._safe_addstr(
-                        row + 1, col * col_width + 1, connection, curses.A_BOLD
-                    )
-                else:
-                    self._safe_addstr(
-                        row + 1, col * col_width + 1, connection, curses.A_DIM
-                    )
+            self._safe_addstr(row + 1, col * col_width + 1, connection, 0)
+
+    def _render_list_of_zones(self, selected: str) -> None:
+        zone_amount = len(self._zone_names)
+        if zone_amount == 0:
+            return
+
+        rows = max(self._max_lines, 1)
+        columns = -(-zone_amount // rows)
+        col_width = self._width // columns + 2
+
+        for id, zone in enumerate(self._zone_names):
+            col = id // rows
+            row = id % rows
+            if zone == selected:
+                self._safe_addstr(
+                    row + 1, col * col_width + 1, zone, curses.A_BOLD
+                )
             else:
-                self._safe_addstr(row + 1, col * col_width + 1, connection, 0)
+                self._safe_addstr(
+                    row + 1, col * col_width + 1, zone, curses.A_DIM
+                )
 
 
 class LogDrawer:
@@ -518,26 +543,53 @@ class MapDrawer:
             return "down" if oy > zy else "up"
         return "right" if ox > zx else "left"
 
+    def _get_connections(self, zone: str) -> list[str]:
+        set_connections: set[str] = set()
+        for c in self._map.connections:
+            if c.a.name == zone:
+                set_connections.add(c.b.name)
+            elif c.b.name == zone:
+                set_connections.add(c.a.name)
+        return list(set_connections)
+
     # addstr(row, col, text, attribute) (row = y, col = x)
     def _draw_network(self, selected: str | None = None) -> None:
         max_y, max_x = self._window.getmaxyx()
         connections = []
         if selected:
-            connections = self._get_connections(selected)
-        # self._draw_connections()
-        for z in self._map.zones:
-            y, x = self._screen_position[z.name]
-            if z.name == selected:
-                id, attr = self._vis.get_colors("blue")
-                attr = curses.A_NORMAL
-            elif z.name in connections:
-                id, attr = self._vis.get_colors("white")
-                attr = curses.A_BOLD
-            else:
+            split = selected.split("-")
+            z_name = split[1].strip()
+            z_name = z_name.removeprefix("[").removesuffix("]")
+            connections = self._get_connections(z_name)
+            self._draw_zones_selected(z_name, connections)
+        else:
+            for z in self._map.zones:
+                y, x = self._screen_position[z.name]
                 if z.color is None:
                     id, attr = 0, curses.A_NORMAL
                 else:
                     id, attr = self._vis.get_colors(z.color)
+                # self._safe_addstr(y - 1, x, "[h]", curses.color_pair(0) | curses.A_BOLD)
+                self._safe_addstr(
+                    y,
+                    x,
+                    f"{self._vis._get_abbreviated_name(z.name)}",
+                    curses.color_pair(id) | attr,
+                )
+
+    def _draw_zones_selected(
+        self, selected: str, connections: list[str]
+    ) -> None:
+        for z in self._map.zones:
+            y, x = self._screen_position[z.name]
+            if z.name == selected:
+                id, attr = self._vis.get_colors("yellow")
+                attr = curses.A_NORMAL
+            elif z.name in connections:
+                id, attr = self._vis.get_colors("green")
+                attr = curses.A_BOLD
+            else:
+                id, attr = 0, curses.A_DIM
                 # self._safe_addstr(y - 1, x, "[h]", curses.color_pair(0) | curses.A_BOLD)
             self._safe_addstr(
                 y,
