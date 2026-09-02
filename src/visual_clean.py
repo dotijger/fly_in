@@ -186,22 +186,39 @@ class Visualizer:
     ) -> Screen:
         id = 0
         max_id = len(turns)
+        if self.selected_map is None:
+            return Screen.MAP_SELECT
+        selected = self._get_connections(self.selected_map.map)
+        s_id = 0
+        max_selected = len(selected)
         height, width = stdscr.getmaxyx()
         map_width = int(width * 0.65)
         log_width = width - map_width
+        log_height = int(height * 0.65)
+        con_height = height - log_height
 
         map_window = curses.newwin(height, map_width, 0, 0)
-        log_window = curses.newwin(height, log_width, 0, map_width)
+        log_window = curses.newwin(
+            log_height, log_width, con_height, map_width
+        )
+        con_window = curses.newwin(con_height, log_width, 0, map_width)
 
         log_drawer = LogDrawer(log_window, turns)
         map_drawer = MapDrawer(map_window, map, turns, vis)
+        con_drawer = ConDrawer(con_window, selected)
 
+        con_drawer.render()
         log_drawer.render(id)
         map_drawer.render(id)
         curses.doupdate()
 
+        inspection = False
         while True:
             key = stdscr.getch()
+            if inspection:
+                con_drawer.render(selected[s_id])
+            else:
+                con_drawer.render()
             if key == curses.KEY_RIGHT:
                 id = min(id + 1, max_id)
                 log_drawer.render(id)
@@ -212,10 +229,73 @@ class Visualizer:
                 log_drawer.render(id)
                 map_drawer.render(id)
                 curses.doupdate()
+            elif key == ord("i"):
+                inspection = True
+                con_drawer.start()
+                con_drawer.render(selected[s_id])
+                log_drawer.render(id)
+                map_drawer.render(id)
             elif key == ord("q"):
                 return Screen.MAP_SELECT
             elif key == 27:
                 return Screen.QUIT
+
+    @staticmethod
+    def _get_abbreviated_name(string: str) -> str:
+        separated = string.split("_")
+        final = ""
+        for s in separated:
+            final += s[0]
+        if separated[-1][-1].isnumeric():
+            final += separated[-1][-1]
+        return final
+
+    def _get_connections(self, map: Network) -> list[str]:
+        cons: list[str] = []
+        for c in map.connections:
+            cons.append(
+                f"{self._get_abbreviated_name(c.a.name)}-{self._get_abbreviated_name(c.b.name)}"
+            )
+        return cons
+
+
+class ConDrawer:
+    def __init__(self, window: curses.window, connections: list[str]) -> None:
+        self._window = window
+        self._connections = connections
+        self._height, self._width = window.getmaxyx()
+        self._max_lines = max(self._height - 2, 1)
+
+    def _safe_addstr(self, y: int, x: int, text: str, attr: int) -> None:
+        max_h, max_w = self._window.getmaxyx()
+
+        if 0 <= y < max_h - 1:
+            try:
+                self._window.addstr(y, x, text[: max_w - x - 1], attr)
+            except curses.error:
+                pass
+
+    def render(self, selected: str | None = None) -> None:
+        self._window.erase()
+        self._window.box()
+        self._window.addstr(0, 2, "[ CONNECTIONS ]", curses.A_BOLD)
+        if selected is not None:
+            pass
+        else:
+            con_amount = len(self._connections)
+            columns = int(con_amount / self._max_lines)
+            col_length = self._max_lines // columns
+            for k in range(len(self._connections)):
+                for i in range(1, columns + 1):
+                    for j in range(col_length):
+                        self._safe_addstr(
+                            j + 1,
+                            int(self._width / columns * i) + 1,
+                            f"{self._connections[k]}",
+                            0,
+                        )
+
+        self._window.noutrefresh()
 
 
 class LogDrawer:
@@ -397,16 +477,6 @@ class MapDrawer:
             return "down" if oy > zy else "up"
         return "right" if ox > zx else "left"
 
-    @staticmethod
-    def _get_abbreviated_name(string: str) -> str:
-        separated = string.split("_")
-        final = ""
-        for s in separated:
-            final += s[0]
-        if separated[-1][-1].isnumeric():
-            final += separated[-1][-1]
-        return final
-
     # addstr(row, col, text, attribute) (row = y, col = x)
     def _draw_network(self) -> None:
         max_y, max_x = self._window.getmaxyx()
@@ -421,7 +491,7 @@ class MapDrawer:
             self._safe_addstr(
                 y,
                 x,
-                f"{self._get_abbreviated_name(z.name)}",
+                f"{self._vis._get_abbreviated_name(z.name)}",
                 curses.color_pair(id) | attr,
             )
 
