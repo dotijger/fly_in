@@ -279,23 +279,33 @@ class ConDrawer:
         self._window.erase()
         self._window.box()
         self._window.addstr(0, 2, "[ CONNECTIONS ]", curses.A_BOLD)
-        if selected is not None:
-            pass
-        else:
-            con_amount = len(self._connections)
-            columns = int(con_amount / self._max_lines)
-            col_length = self._max_lines // columns
-            for k in range(len(self._connections)):
-                for i in range(1, columns + 1):
-                    for j in range(col_length):
-                        self._safe_addstr(
-                            j + 1,
-                            int(self._width / columns * i) + 1,
-                            f"{self._connections[k]}",
-                            0,
-                        )
+        self._render_list_of_connections(selected)
 
         self._window.noutrefresh()
+
+    def _render_list_of_connections(self, selected: str | None = None) -> None:
+        con_amount = len(self._connections)
+        if con_amount == 0:
+            return
+
+        rows = max(self._max_lines, 1)
+        columns = -(-con_amount // rows)
+        col_width = self._width // columns + 2
+
+        for id, connection in enumerate(self._connections):
+            col = id // rows
+            row = id % rows
+            if selected:
+                if connection == selected:
+                    self._safe_addstr(
+                        row + 1, col * col_width + 1, connection, curses.A_BOLD
+                    )
+                else:
+                    self._safe_addstr(
+                        row + 1, col * col_width + 1, connection, curses.A_DIM
+                    )
+            else:
+                self._safe_addstr(row + 1, col * col_width + 1, connection, 0)
 
 
 class LogDrawer:
