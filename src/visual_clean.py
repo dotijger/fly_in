@@ -488,6 +488,15 @@ class MapDrawer:
         except curses.error:
             pass
 
+    @staticmethod
+    def _get_average_coordinate(a: int, b: int) -> int:
+        if a == b:
+            return a
+        if a > b:
+            return int((a - b) / 2 + b)
+        else:
+            return int((b - a) / 2 + a)
+
     def _compute_drawing_layout(self) -> None:
         screen_height, screen_width = self._window.getmaxyx()
         xs = [z.x for z in self._map.zones]
@@ -507,6 +516,13 @@ class MapDrawer:
             scaled_x = self.MARGIN + int(x * (usable_width - 1))
             scaled_y = self.MARGIN + int(y * (usable_height - 3))
             self._screen_position[zone.name] = (scaled_y, scaled_x)
+        for c in self._connections:
+            ay, ax = self._screen_position[c.a.name]
+            by, bx = self._screen_position[c.b.name]
+            self._screen_position[c.name] = (
+                round((ay + by) / 2),
+                round((ax + bx) / 2),
+            )
 
     def _draw_line(self, ya: int, xa: int, yb: int, xb: int) -> None:
         self._draw_vertical_line(ya, xa, yb)
@@ -597,7 +613,7 @@ class MapDrawer:
                 attr = curses.A_UNDERLINE | curses.A_BOLD
             elif z.name in connections:
                 id, attr = self._vis.get_colors("green")
-                attr = curses.A_BOLD
+                attr = curses.A_UNDERLINE | curses.A_BOLD
             else:
                 id, attr = 0, curses.A_DIM
                 # self._safe_addstr(y - 1, x, "[h]", curses.color_pair(0) | curses.A_BOLD)
@@ -657,7 +673,7 @@ class MapDrawer:
         for moves in movements:
             drone_moves = moves.split(" ")
             for move in drone_moves:
-                drone_name, place = move.split("-")
+                drone_name, place = move.split("-", maxsplit=1)
                 if drone_log[drone_name] == place:
                     continue
                 else:
