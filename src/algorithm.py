@@ -11,10 +11,14 @@ class PathFinder(BaseModel):
     def _create_graph(self) -> None:
         graph = {}
         for zone in self.map.zones:
+            if zone.zone_type == "blocked":
+                continue
             neighbors = {}
             for connection in self.map.connections:
                 next = connection.other(zone)
                 if next is not None:
+                    if next.zone_type == "blocked":
+                        continue
                     neighbors[next.name] = next.cost
                 graph[zone.name] = neighbors
         self.graph = graph
@@ -37,9 +41,13 @@ class PathFinder(BaseModel):
             if zone.kind == -1:
                 end = zone.name
         if not start:
-            raise PathError("Map does not have a start hub defined, aborting.")
+            raise PathError(
+                f"Map '{self.map.name}' does not have a start hub defined, aborting."
+            )
         if not end:
-            raise PathError("Map does not have a goal hub defined, aborting.")
+            raise PathError(
+                f"Map '{self.map.name}' does not have a goal hub defined, aborting."
+            )
         distances = {hub: float("inf") for hub in self.graph}
         distances[start] = 0
 
@@ -55,11 +63,17 @@ class PathFinder(BaseModel):
             visited.add(current_hub)
 
             for neighbor, cost in self.graph[current_hub].items():
+                if neighbor not in distances:
+                    continue
                 new_cost = current_cost + cost
                 if new_cost < distances[neighbor]:
                     distances[neighbor] = new_cost
                     heappush(pq, (new_cost, neighbor))
 
+        if distances[end] == float("inf"):
+            raise PathError(
+                f"Goal hub '{end}' is not reachable from start in '{self.map.name}'."
+            )
         return distances
 
     def run(self) -> list[tuple[str, int]]:

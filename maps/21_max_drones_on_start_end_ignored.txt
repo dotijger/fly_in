@@ -1,0 +1,9 @@
+# max_drones on start_hub/end_hub must be IGNORED, not rejected - this file should parse successfully.
+nb_drones: 5
+
+start_hub: base 0 0 [max_drones=1]
+end_hub: goal 5 5 [max_drones=1]
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-goal

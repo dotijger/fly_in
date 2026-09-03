@@ -1,41 +1,6 @@
 from typing import Self, TypedDict
-from pydantic import BaseModel, model_validator
-from enum import Enum, auto
-
-
-class AnsiColor(Enum):
-    """ANSI escape codes used to color terminal output.
-
-    Each member's value is the raw ANSI escape sequence that switches
-    the terminal's foreground color (or, for ``RESET``, restores the
-    default). Concatenate a member's ``value`` before text to color it,
-    and append ``Color.RESET.value`` afterwards to stop the effect from
-    bleeding into subsequent output.
-    """
-
-    RESET = "\033[0m"
-
-    # Standard ANSI (16-color)
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
-
-    # Approximated via 256-color codes
-    PURPLE = "\033[38;5;93m"
-    ORANGE = "\033[38;5;208m"
-    PINK = "\033[38;5;213m"
-    BROWN = "\033[38;5;94m"
-    GOLD = "\033[38;5;220m"
-
-
-class ZoneType(Enum):
-    NORMAL = auto()
-    PRIORITY = auto()
-    RESTRICTED = auto()
-    BLOCKED = auto()
+from pydantic import BaseModel, model_validator, Field
+from enum import Enum
 
 
 class HubType(Enum):
@@ -46,12 +11,12 @@ class HubType(Enum):
 
 class Zone(BaseModel):
     kind: int
-    name: str
+    name: str = Field(r"[]")
     x: int
     y: int
     metadata: list[str] | None = None
     color: str | None = None
-    max_drones: int = 1
+    max_drones: int = Field(default=1, ge=1)
     zone_type: str = "normal"
     cost: int = 1
 
@@ -59,7 +24,7 @@ class Zone(BaseModel):
     def check(self) -> Self:
         if self.metadata is not None:
             self._extract_metadata()
-        if "-" in self.name:
+        if "-" in self.name or " " in self.name:
             raise ValueError(
                 f"{self.name} is invalid, zone names cannot contain dashes."
             )
@@ -78,24 +43,29 @@ class Zone(BaseModel):
             if attribute.startswith("color="):
                 self.color = attribute.removeprefix("color=").strip()
             elif attribute.startswith("max_drones="):
+                if attribute.removeprefix("max_drones=") == "0":
+                    raise ValueError(
+                        f"zone '{self.name}' cannot have a max capacity of 0 drones."
+                    )
                 try:
                     self.max_drones = int(
                         attribute.removeprefix("max_drones=").strip()
                     )
                 except ValueError:
                     raise ValueError(
-                        f"Max drones in {self.name} is not an integer."
+                        f"max drones in {self.name} is not an integer."
                     )
                 if self.max_drones < 0:
                     raise ValueError(
-                        f"Max drones of zone {self.name} cannot be negative."
+                        f"max drones of zone {self.name} cannot be negative."
                     )
             elif attribute.startswith("zone="):
                 self.zone_type = attribute.removeprefix("zone=").strip()
                 types = ["normal", "priority", "restricted", "blocked"]
                 if self.zone_type not in types:
                     raise ValueError(
-                        f"Zone type of zone {self.name} is not a valid zone type."
+                        f"zone type of zone {self.name} is not a valid zone type.\n\
+Allowed: 'normal', 'priority', 'blocked', 'restricted'."
                     )
                 if self.zone_type == "restricted":
                     self.cost = 2
@@ -162,13 +132,6 @@ class Record(BaseModel):
 
 class Network(BaseModel):
     name: str
-    nb_drones: int
-    zones: list[Zone]
-    connections: list[Connection]
-
-
-class MapDict(TypedDict):
-    map_name: str
     nb_drones: int
     zones: list[Zone]
     connections: list[Connection]

@@ -1,0 +1,9 @@
+# mid's coordinates are floats, not integers.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2.5 2.5
+
+connection: base-mid
+connection: mid-goal

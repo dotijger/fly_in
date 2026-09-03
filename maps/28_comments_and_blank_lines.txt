@@ -1,0 +1,18 @@
+# Full map comment at top.
+nb_drones: 3
+# Comment between sections.
+
+start_hub: base 0 0 [color=green]
+
+# Comment right before a hub.
+end_hub: goal 5 5 [color=yellow]
+
+hub: mid 2 2 [zone=priority color=green]
+# Another comment.
+hub: alt 3 1
+
+connection: base-mid
+connection: base-alt
+# Comment between connections.
+connection: mid-goal
+connection: alt-goal

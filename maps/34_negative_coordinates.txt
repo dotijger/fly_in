@@ -1,0 +1,9 @@
+# Negative coordinates - spec says "always integers" but doesn't forbid negative values.
+nb_drones: 2
+
+start_hub: base -3 -3
+end_hub: goal 5 5
+hub: mid 0 0
+
+connection: base-mid
+connection: mid-goal

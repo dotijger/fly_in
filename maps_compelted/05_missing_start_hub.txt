@@ -1,0 +1,9 @@
+# No start_hub line anywhere.
+nb_drones: 2
+
+end_hub: goal 5 5
+hub: base 0 0
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-goal

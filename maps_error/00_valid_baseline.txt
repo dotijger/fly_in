@@ -1,0 +1,10 @@
+# Valid baseline map - should parse with zero errors.
+# Use this as a control: if this fails, the bug is in your happy path, not your edge-case handling.
+nb_drones: 3
+
+start_hub: base 0 0 [color=green]
+end_hub: goal 5 5 [color=yellow]
+hub: mid 2 2 [zone=normal color=blue]
+
+connection: base-mid
+connection: mid-goal

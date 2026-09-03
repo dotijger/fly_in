@@ -9,8 +9,12 @@ import sys
 if __name__ == "__main__":
     parse = Parser(input=Path("maps"))
     try:
-        logger = Logger()
         maps = parse._import_maps()
+    except ParseError as e:
+        print(e)
+        sys.exit(1)
+    try:
+        logger = Logger()
         sims = []
         for map in maps:
             sim = Simulation(map=map, logger=logger)

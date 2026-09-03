@@ -1,0 +1,9 @@
+# max_drones=0 - spec requires positive integers for capacity values.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2 [max_drones=0]
+
+connection: base-mid
+connection: mid-goal

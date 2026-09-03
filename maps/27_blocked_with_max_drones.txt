@@ -1,0 +1,13 @@
+# Blocked zone with max_drones set - odd but not explicitly forbidden by spec.
+# Also tests that metadata tags can appear in any order (max_drones before zone).
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2 [max_drones=3 zone=blocked color=gray]
+hub: alt 3 1
+
+connection: base-mid
+connection: base-alt
+connection: alt-goal
+connection: mid-goal

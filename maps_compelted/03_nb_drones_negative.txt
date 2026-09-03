@@ -1,0 +1,9 @@
+# nb_drones is negative.
+nb_drones: -4
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-goal

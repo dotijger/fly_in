@@ -1,0 +1,7 @@
+# nb_drones line is missing entirely - first real content is a zone.
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-goal

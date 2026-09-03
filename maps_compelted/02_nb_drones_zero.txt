@@ -1,0 +1,9 @@
+# nb_drones is 0. Spec says <positive_integer>, so 0 should be rejected.
+nb_drones: 0
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-goal

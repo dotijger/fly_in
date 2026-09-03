@@ -1,0 +1,9 @@
+# nb_drones value is not an integer.
+nb_drones: five
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-goal

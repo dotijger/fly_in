@@ -1,0 +1,9 @@
+# max_link_capacity=many - not a valid integer.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+
+connection: base-mid [max_link_capacity=many]
+connection: mid-goal

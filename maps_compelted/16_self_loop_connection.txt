@@ -1,0 +1,10 @@
+# "mid-mid" is a self-loop. Decide whether your parser rejects or ignores this.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-mid
+connection: mid-goal

@@ -61,11 +61,11 @@ class Simulation(BaseModel):
         i = 1
         while len(arrived_drones) < len(self.drones):
             turn_record = resolver.resolve(self.drones, i)
-            print(turn_record.get_records())
+            # print(turn_record.get_records())
             self.log.append(turn_record)
             arrived_drones = [
                 d for d in self.drones if d.status == DroneStatus.ARRIVED
             ]
             i += 1
-        print(f"All drones have succesfully arrived in {i} TURNS")
+        # print(f"All drones have succesfully arrived in {i} TURNS")
         return self.log

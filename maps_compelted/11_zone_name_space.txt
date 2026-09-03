@@ -1,0 +1,8 @@
+# Zone name "way point" contains a space - forbidden.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: way-point 2 2
+
+connection: base-goal

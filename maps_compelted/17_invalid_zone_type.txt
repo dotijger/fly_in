@@ -1,0 +1,9 @@
+# zone=turbo is not one of normal, blocked, restricted, priority.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2 [zone=turbo]
+
+connection: base-mid
+connection: mid-goal

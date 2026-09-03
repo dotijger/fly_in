@@ -1,0 +1,11 @@
+# "mid" is the ONLY path from base to goal, and it's blocked.
+# This should parse fine (blocked is a valid zone type) but the simulation
+# should report that goal is unreachable, not crash.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2 [zone=blocked]
+
+connection: base-mid
+connection: mid-goal

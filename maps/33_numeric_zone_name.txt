@@ -1,0 +1,9 @@
+# Zone name "123" is purely numeric - legal per spec (no dash, no space).
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: 123 2 2
+
+connection: base-123
+connection: 123-goal

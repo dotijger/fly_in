@@ -1,0 +1,3 @@
+# This file has nothing but comments.
+# No nb_drones, no zones, no connections.
+# Should fail gracefully with a clear error.

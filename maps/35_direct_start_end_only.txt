@@ -1,0 +1,7 @@
+# Minimal graph: just start and end, directly connected, no intermediate zones.
+nb_drones: 1
+
+start_hub: base 0 0
+end_hub: goal 1 0
+
+connection: base-goal

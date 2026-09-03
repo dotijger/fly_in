@@ -1,0 +1,10 @@
+# "mid" is defined twice - names must be unique.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+hub: mid 3 3
+
+connection: base-mid
+connection: mid-goal

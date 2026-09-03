@@ -1,0 +1,9 @@
+# connection line appears before "goal" zone has been declared.
+nb_drones: 2
+
+start_hub: base 0 0
+hub: mid 2 2
+connection: base-mid
+connection: mid-goal
+
+end_hub: goal 5 5

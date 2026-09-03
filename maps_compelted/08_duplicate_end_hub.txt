@@ -1,0 +1,11 @@
+# Two end_hub declarations - spec requires exactly one.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+end_hub: goal2 6 6
+hub: mid 2 2
+
+connection: base-mid
+connection: mid-goal
+connection: mid-goal2

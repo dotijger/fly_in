@@ -1,0 +1,9 @@
+# "mid" only has one coordinate value instead of x and y.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2
+
+connection: base-mid
+connection: mid-goal

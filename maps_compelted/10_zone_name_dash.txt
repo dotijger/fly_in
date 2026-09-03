@@ -1,0 +1,9 @@
+# Zone name "way-point" contains a dash - forbidden, ambiguous with connection syntax.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: way-point 2 2
+
+connection: base-way-point
+connection: way-point-goal

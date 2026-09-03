@@ -1,0 +1,10 @@
+# "island" is declared but never appears in any connection - fully isolated.
+nb_drones: 2
+
+start_hub: base 0 0
+end_hub: goal 5 5
+hub: mid 2 2
+hub: island 9 9
+
+connection: base-mid
+connection: mid-goal
