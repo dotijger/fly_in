@@ -293,7 +293,16 @@ class Visualizer:
 
     def _get_zones(self, map: Network) -> list[str]:
         zones: list[str] = []
-        for z in map.zones:
+        sorted_zones = map.zones.copy()
+        sorted_zones.sort(key=lambda z: z.y)
+        for i, z in enumerate(sorted_zones):
+            if z.kind == 1:
+                tmp = sorted_zones.pop(i)
+                sorted_zones.insert(0, tmp)
+            elif z.kind == -1:
+                tmp = sorted_zones.pop(i)
+                sorted_zones.insert(len(map.zones) - 1, tmp)
+        for z in sorted_zones:
             zones.append(f"{self._get_abbreviated_name(z.name)} - [{z.name}]")
         return zones
 
@@ -583,8 +592,9 @@ class MapDrawer:
         for z in self._map.zones:
             y, x = self._screen_position[z.name]
             if z.name == selected:
-                id, attr = self._vis.get_colors("yellow")
-                attr = curses.A_NORMAL
+                # id, attr = self._vis.get_colors("green")
+                id = 0
+                attr = curses.A_UNDERLINE | curses.A_BOLD
             elif z.name in connections:
                 id, attr = self._vis.get_colors("green")
                 attr = curses.A_BOLD
