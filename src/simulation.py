@@ -2,13 +2,11 @@ from src.classes import Network, Zone, Connection, Drone, Record, DroneStatus
 from src.error import SimulationError
 from pydantic import BaseModel
 from src.algorithm import PathFinder
-from src.logger import Logger
 from src.resolver import TurnResolver
 
 
 class Simulation(BaseModel):
     map: Network
-    logger: Logger
     zone_by_name: dict[str, Zone] = {}
     connection_by_name: dict[tuple[str, str], Connection] = {}
     log: list[Record] = []

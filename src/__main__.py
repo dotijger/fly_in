@@ -1,5 +1,4 @@
 from src.parser import Parser
-from src.logger import Logger
 from src.simulation import Simulation
 from src.visual_clean import Visualizer
 from src.error import ParseError, PathError, SimulationError
@@ -14,10 +13,9 @@ if __name__ == "__main__":
         print(e)
         sys.exit(1)
     try:
-        logger = Logger()
         sims = []
         for map in maps:
-            sim = Simulation(map=map, logger=logger)
+            sim = Simulation(map=map)
             sim.run()
             sims.append(sim)
         vis = Visualizer(sims=sims)
