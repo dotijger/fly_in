@@ -1,4 +1,4 @@
-from typing import Self, TypedDict
+from typing import Self
 from pydantic import BaseModel, model_validator, Field
 from enum import Enum
 
@@ -45,7 +45,8 @@ class Zone(BaseModel):
             elif attribute.startswith("max_drones="):
                 if attribute.removeprefix("max_drones=") == "0":
                     raise ValueError(
-                        f"zone '{self.name}' cannot have a max capacity of 0 drones."
+                        f"zone '{self.name}' cannot have a max capacity \
+of 0 drones."
                     )
                 try:
                     self.max_drones = int(
@@ -64,8 +65,8 @@ class Zone(BaseModel):
                 types = ["normal", "priority", "restricted", "blocked"]
                 if self.zone_type not in types:
                     raise ValueError(
-                        f"zone type of zone {self.name} is not a valid zone type.\n\
-Allowed: 'normal', 'priority', 'blocked', 'restricted'."
+                        f"zone type of zone {self.name} is not a \
+valid zone type.\nAllowed: 'normal', 'priority', 'blocked', 'restricted'."
                     )
                 if self.zone_type == "restricted":
                     self.cost = 2

@@ -8,7 +8,7 @@ class ParseError(Exception):
     def __init__(
         self,
         file: str,
-        line_number: str,
+        line_number: int,
         line_content: str,
         message: str,
         expected: str | None = None,

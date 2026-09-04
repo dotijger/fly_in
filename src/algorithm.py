@@ -42,11 +42,13 @@ class PathFinder(BaseModel):
                 end = zone.name
         if not start:
             raise PathError(
-                f"Map '{self.map.name}' does not have a start hub defined, aborting."
+                f"Map '{self.map.name}' does not have a start hub defined,\
+aborting."
             )
         if not end:
             raise PathError(
-                f"Map '{self.map.name}' does not have a goal hub defined, aborting."
+                f"Map '{self.map.name}' does not have a goal hub defined,\
+aborting."
             )
         distances = {hub: float("inf") for hub in self.graph}
         distances[start] = 0
@@ -72,7 +74,8 @@ class PathFinder(BaseModel):
 
         if distances[end] == float("inf"):
             raise PathError(
-                f"Goal hub '{end}' is not reachable from start in '{self.map.name}'."
+                f"Goal hub '{end}' is not reachable from start in \
+'{self.map.name}'."
             )
         return distances
 

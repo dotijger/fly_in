@@ -15,7 +15,7 @@ class Simulation(BaseModel):
     drones: list[Drone] = []
     path: list[tuple[str, int]] = []
 
-    def _setup(self):
+    def _setup(self) -> None:
         start_hub = None
         for zone in self.map.zones:
             if zone.kind == 1:

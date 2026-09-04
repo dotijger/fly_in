@@ -10,7 +10,7 @@ class Parser(BaseModel):
     zones: list[Zone] = []
     connections: list[Connection] = []
     nb_drones: int | None = None
-    seen_connections: set[str] = set()
+    seen_connections: set[frozenset[str]] = set()
 
     def _import_maps(self) -> list[Network]:
         maps = []
@@ -34,7 +34,7 @@ class Parser(BaseModel):
         with open(loc, "r") as file:
             raw_text = file.readlines()
         if len(raw_text) == 0:
-            raise ParseError(str(loc), "", "", "Map file is completely empty.")
+            raise ParseError(str(loc), 0, "", "Map file is completely empty.")
         nb_drones, zones, connections = False, False, False
         for number, line in enumerate(raw_text, start=1):
             line = line.strip()
@@ -52,7 +52,7 @@ class Parser(BaseModel):
         if not nb_drones and not zones and not connections:
             raise ParseError(
                 str(loc),
-                "",
+                0,
                 "",
                 "Map file contains no definitions whatsoever.",
             )
@@ -103,7 +103,8 @@ class Parser(BaseModel):
                         str(loc),
                         number,
                         line,
-                        "Hubs cannot be defined before number of drones has been defined.",
+                        "Hubs cannot be defined before number of drones \
+has been defined.",
                     )
             elif line.startswith("connection: "):
                 if not connections:
@@ -112,14 +113,16 @@ class Parser(BaseModel):
                             str(loc),
                             number,
                             line,
-                            "Connections cannot be defined before number of drones has been defined.",
+                            "Connections cannot be defined before number \
+of drones has been defined.",
                         )
                     elif nb_zones == 0:
                         raise ParseError(
                             str(loc),
                             number,
                             line,
-                            "No connections can be defined if there are no hubs defined.",
+                            "No connections can be defined if there are no \
+hubs defined.",
                         )
                     else:
                         zones = False
@@ -131,7 +134,8 @@ class Parser(BaseModel):
                             str(loc),
                             number,
                             line,
-                            "No connections can be defined if there are no hubs defined.",
+                            "No connections can be defined if there are no \
+hubs defined.",
                         )
 
     def _read_map(self, loc: Path) -> Network:
@@ -238,7 +242,7 @@ types of metadata: 'zone', 'max_drones', 'color'",
                                 str(loc),
                                 number,
                                 line,
-                                "metadata [key=value] pairs have to be complete.",
+                                "metadata [key=value] pairs are incomplete.",
                             )
                         new_hub = Zone(
                             kind=start,
@@ -279,26 +283,28 @@ types of metadata: 'zone', 'max_drones', 'color'",
                 max_link_capacity = 1
                 hub_names = []
                 for hub in connection_data:
-                    hub = hub.split(" ")
-                    if len(hub) > 1:
+                    hubs = hub.split(" ")
+                    if len(hubs) > 1:
                         try:
-                            max_link_capacity = int(hub[1][-2])
+                            max_link_capacity = int(hubs[1][-2])
                         except ValueError:
                             raise ParseError(
                                 str(loc),
                                 number,
                                 line,
-                                "'max_link_capacity' is not defined as a positive integer.",
+                                "'max_link_capacity' is not defined as a \
+positive integer.",
                             )
                             sys.exit(1)
-                    hub_names.append(hub[0])
+                    hub_names.append(hubs[0])
                 for hub in hub_names:
                     if hub not in zone_names:
                         raise ParseError(
                             str(loc),
                             number,
                             line,
-                            f"Connection contains an undefined zone: '{hub}'. Connections can only be made between two predefined zones.",
+                            f"Connection contains an undefined zone: '{hub}'. \
+Connections can only be made between two predefined zones.",
                         )
                 if len(connection_data) > 2:
                     raise ValueError(f"{line} has too many hubs specified.")
@@ -322,7 +328,7 @@ types of metadata: 'zone', 'max_drones', 'color'",
                         str(loc),
                         number,
                         line,
-                        "Duplicate (exact or reversed) connections are not allowed.",
+                        "Duplicate connections are not allowed.",
                     )
                 try:
                     connection = Connection(
@@ -334,12 +340,19 @@ types of metadata: 'zone', 'max_drones', 'color'",
                         frozenset({connection.a.name, connection.b.name})
                     )
                     self.connections.append(connection)
-                except ValueError as e:
-                    print(
-                        f"Fault connection data: {e.errors()[0]['msg']} Found in {str(loc)}."
-                    )
+                except ValidationError as e:
+                    messages = "; ".join(err["msg"] for err in e.errors())
+                    raise ParseError(str(loc), number, line, f"{messages}")
         path_to_str = str(loc)
         sliced = path_to_str.split("/")
+        if self.nb_drones is None:
+            raise ParseError(
+                str(loc),
+                0,
+                "",
+                "After parsing, no number of drones has been found in .txt,\
+ aborting.",
+            )
         return Network(
             name=sliced[-1],
             nb_drones=self.nb_drones,
@@ -348,7 +361,7 @@ types of metadata: 'zone', 'max_drones', 'color'",
         )
 
     @staticmethod
-    def _check_valid_metadata(metadata: str) -> None:
+    def _check_valid_metadata(metadata: str) -> bool:
         valid = False
         for c in metadata:
             if c == "=":
@@ -371,7 +384,8 @@ types of metadata: 'zone', 'max_drones', 'color'",
         print("\nConnections:")
         for conn in network.connections:
             print(
-                f"  {conn.a.name} <-> {conn.b.name}  (capacity={conn.max_link_capacity})"
+                f"  {conn.a.name} <-> {conn.b.name}  \
+(capacity={conn.max_link_capacity})"
             )
 
 

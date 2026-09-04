@@ -1,6 +1,5 @@
 import curses
 from src.simulation import Simulation
-from src.logger import Logger
 from src.classes import Record, Network, Zone, Connection
 from src.error import VisualizationError
 from enum import Enum, auto
@@ -38,7 +37,7 @@ class Visualizer:
             elif screen == Screen.VIEWER:
                 if self.selected_map is None:
                     raise VisualizationError(
-                        "No map has been selected, unable to start visualization."
+                        "No map is selected, unable to start visualization."
                     )
                 turn_records: list[Record] = self.selected_map.log
                 screen = self.draw_viewer(
@@ -52,7 +51,7 @@ class Visualizer:
         curses.start_color()
         curses.use_default_colors()
 
-        self.COLOR_MAP: dict[str, tuple[int, int]] = {
+        self.COLOR_MAP = {
             "green": (curses.COLOR_GREEN, curses.A_NORMAL),
             "red": (curses.COLOR_RED, curses.A_NORMAL),
             "blue": (curses.COLOR_BLUE, curses.A_NORMAL),
@@ -77,7 +76,7 @@ class Visualizer:
             "rainbow": (
                 curses.COLOR_WHITE,
                 curses.A_BOLD,
-            ),  # goal zone in challenger map — no way to actually rainbow a single addstr call
+            ),
         }
         self.DEFAULT_COLOR = (curses.COLOR_WHITE, curses.A_NORMAL)
 
@@ -287,7 +286,8 @@ class Visualizer:
         cons: list[str] = []
         for c in map.connections:
             cons.append(
-                f"{self._get_abbreviated_name(c.a.name)}-{self._get_abbreviated_name(c.b.name)}"
+                f"{self._get_abbreviated_name(c.a.name)}-\
+{self._get_abbreviated_name(c.b.name)}"
             )
         return cons
 
@@ -295,6 +295,8 @@ class Visualizer:
         zones: list[str] = []
         sorted_zones = map.zones.copy()
         sorted_zones.sort(key=lambda z: z.y)
+        if not self.selected_map:
+            raise VisualizationError("No simulation found, aborting.")
         path_by_zone = self.selected_map.unpacked_path().copy()
         sorted_zones_remaining = [
             z for z in sorted_zones if z not in path_by_zone
@@ -399,7 +401,7 @@ class LogDrawer:
             except curses.error:
                 pass
 
-    def render(self, id: int):
+    def render(self, id: int) -> None:
         self._window.erase()
         self._window.box()
         self._window.addstr(0, 2, "[ TURN LOG ]", curses.A_BOLD)
@@ -420,7 +422,7 @@ class LogDrawer:
                     line, width=wrap_width, subsequent_indent=" " * prefix
                 ):
                     wrapped.append((part, last))
-            visible_lines = wrapped[-self._max_lines :]
+            visible_lines = wrapped[-self._max_lines:]
             for i, (line, last) in enumerate(visible_lines, start=1):
                 attr = curses.A_BOLD if last else curses.A_DIM
                 self._safe_addstr(i, 2, line, attr)
@@ -582,7 +584,6 @@ class MapDrawer:
                 set_connections.add(c.a.name)
         return list(set_connections)
 
-    # addstr(row, col, text, attribute) (row = y, col = x)
     def _draw_network(self, selected: str | None = None) -> None:
         max_y, max_x = self._window.getmaxyx()
         connections = []
@@ -599,7 +600,6 @@ class MapDrawer:
                     id, attr = 0, curses.A_NORMAL
                 else:
                     id, attr = self._vis.get_colors(z.color)
-                # self._safe_addstr(y - 1, x, "[h]", curses.color_pair(0) | curses.A_BOLD)
                 self._safe_addstr(
                     y,
                     x,
@@ -621,7 +621,6 @@ class MapDrawer:
                 attr = curses.A_UNDERLINE | curses.A_BOLD
             else:
                 id, attr = 0, curses.A_DIM
-                # self._safe_addstr(y - 1, x, "[h]", curses.color_pair(0) | curses.A_BOLD)
             self._safe_addstr(
                 y,
                 x,
@@ -631,13 +630,12 @@ class MapDrawer:
 
     def _draw_connections(self) -> None:
         ports = self._compute_ports()
-        occupied: dict[tuple[int, int], int] = {}
+        # occupied: dict[tuple[int, int], int] = {}
         for c in self._connections:
             ya, xa, yb, xb = ports[c]
-            color = vis._color_for(c)
-            self._safe_addch(ya, xa, curses.ACS_BLOCK, color)
-            self._safe_addch(yb, xb, curses.ACS_BLOCK, color)
-            self._draw_line(ya, xa, yb, xb, occupied, color)
+            self._safe_addch(ya, xa, curses.ACS_BLOCK)
+            self._safe_addch(yb, xb, curses.ACS_BLOCK)
+            self._draw_line(ya, xa, yb, xb)
 
     def _compute_ports(self) -> dict[Connection, tuple[int, int, int, int]]:
         groups: dict[tuple[str, str], list[Connection]] = {}
@@ -695,9 +693,3 @@ class MapDrawer:
                 f"{drone}",
                 curses.color_pair(id) | curses.A_BOLD,
             )
-
-
-if __name__ == "__main__":
-    log = Logger()
-    vis = Visualizer()
-    vis.run()
