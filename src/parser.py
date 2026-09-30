@@ -102,12 +102,9 @@ class Parser(BaseModel):
         zones = False
         nb_zones = 0
         connections = False
-        for number, line in enumerate(raw_text, start=1):
-            if line.startswith("#"):
-                continue
-            line = line.strip()
-            line.rstrip("\n")
-            if line == "" or line.isspace():
+        for number, raw in enumerate(raw_text, start=1):
+            line = raw.split('#', 1)[0].strip()
+            if not line:
                 continue
             if line.startswith("nb_drones: "):
                 if nb_drones:
@@ -199,11 +196,10 @@ hubs defined.",
         zone_names = []
         start_hubs = 0
         end_hubs = 0
-        for number, line in enumerate(raw_text, start=1):
-            if line.startswith("#"):
+        for number, raw in enumerate(raw_text, start=1):
+            line = raw.split('#', 1)[0].strip()
+            if not line:
                 continue
-            line = line.strip()
-            line = line.rstrip("\n")
             if line.startswith("nb_drones: "):
                 drones_data = line.split()
                 try:
