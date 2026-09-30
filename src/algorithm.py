@@ -5,10 +5,22 @@ from heapq import heapify, heappop, heappush
 
 
 class PathFinder(BaseModel):
+    """Finds the cheapest route from the start hub to the end hub.
+ 
+    Attributes:
+        map: The parsed network to search.
+        graph: Adjacency map of zone name -> {neighbor name: entry cost},
+            built by ``_create_graph`` with blocked zones left out.
+    """
     map: Network
     graph: dict[str, dict[str, int]] = {}
 
     def _create_graph(self) -> None:
+        """Build ``self.graph`` from the network's zones and connections.
+ 
+        Blocked zones are excluded both as nodes and as neighbors. Edge
+        weights are the cost of entering the neighbor zone.
+        """
         graph = {}
         for zone in self.map.zones:
             if zone.zone_type == "blocked":
@@ -24,6 +36,7 @@ class PathFinder(BaseModel):
         self.graph = graph
 
     def print_graph(self) -> None:
+        """Print the adjacency map, one zone per line (debugging)"""
         print("{")
         for k, v in self.graph.items():
             print(f"'{k}': {v}")
@@ -31,9 +44,20 @@ class PathFinder(BaseModel):
 
     @property
     def get_graph(self) -> dict[str, dict[str, int]]:
+        """dict[str, dict[str, int]]: current adjacency map"""
         return self.graph
 
     def dijkstra(self) -> dict[str, float]:
+        """Compute the cheapest cost from the start hub to every zone.
+ 
+        Returns:
+            Mapping of zone name to its minimal cost from the start hub;
+            unreachable zones keep path cost of infinity.
+ 
+        Raises:
+            PathError: If the map has no start or end hub, or if the end
+                hub is unreachable.
+        """
         start, end = None, None
         for zone in self.map.zones:
             if zone.kind == 1:
@@ -80,6 +104,15 @@ aborting."
         return distances
 
     def run(self) -> list[tuple[str, int]]:
+        """Build the graph, run Dijkstra and reconstruct one cheapest path.
+ 
+        Returns:
+            The path from start to end as (zone name, cost to enter) pairs;
+            the first entry is the start hub with cost 0.
+ 
+        Raises:
+            PathError: If the map has no end hub or it is unreachable.
+        """
         self._create_graph()
         distances = self.dijkstra()
         came_from = {hub: "" for hub in self.graph}

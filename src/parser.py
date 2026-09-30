@@ -6,6 +6,15 @@ import sys
 
 
 class Parser(BaseModel):
+    """Reads and validates map files into Network objects.
+ 
+    Attributes:
+        - input: Directory searched recursively for ``*.txt`` maps.
+        - zones: Zones collected for the map currently being parsed.
+        - connections: Connections collected for the current map.
+        - nb_drones: Drone count of the current map, once read.
+        - seen_connections: Unordered name pairs, used to reject duplicates.
+    """
     input: Path
     zones: list[Zone] = []
     connections: list[Connection] = []
@@ -13,6 +22,17 @@ class Parser(BaseModel):
     seen_connections: set[frozenset[str]] = set()
 
     def _import_maps(self) -> list[Network]:
+        """Parse every *.txt map found under 'self.input'.
+ 
+        Parser state is reset before each file. Pre-check failures print
+        the error and exit the program.
+ 
+        Returns:
+            One Network per map file.
+ 
+        Raises:
+            ParseError: If a map fails validation while being read.
+        """
         maps = []
         maps_tbr = list(self.input.rglob("*.txt"))
         if len(maps_tbr) >= 1:
@@ -31,6 +51,14 @@ class Parser(BaseModel):
         return maps
 
     def _check_empty_file(self, loc: Path) -> None:
+        """Reject files that are empty or contain no definitions.
+ 
+        Args:
+            loc: Path of the map file.
+ 
+        Raises:
+            ParseError: If the file is empty or has no recognised lines.
+        """
         with open(loc, "r") as file:
             raw_text = file.readlines()
         if len(raw_text) == 0:
@@ -58,6 +86,16 @@ class Parser(BaseModel):
             )
 
     def _check_definition_order(self, loc: Path) -> None:
+        """Check that sections appear as nb_drones >> hubs >> connections.
+ 
+        Comments and blank lines are skipped.
+ 
+        Args:
+            loc: Path of the map file.
+ 
+        Raises:
+            ParseError: On a repeated nb_drones line or out-of-order section.
+        """
         with open(loc, "r") as file:
             raw_text = file.readlines()
         nb_drones = True
@@ -139,6 +177,22 @@ hubs defined.",
                         )
 
     def _read_map(self, loc: Path) -> Network:
+        """Parse one map file into a Network.
+ 
+        Handles the drone count, hub lines (with optional metadata) and
+        connection lines (with optional max_link_capacity), validating
+        uniqueness, references and duplicates as it goes.
+ 
+        Args:
+            loc: Path of the map file.
+ 
+        Returns:
+            The parsed network, named after the file.
+ 
+        Raises:
+            ParseError: On any syntax or validation error, with line info.
+            ValueError: If a connection names more than two hubs.
+        """
         with open(loc, "r") as file:
             raw_text = file.readlines()
 
@@ -362,6 +416,14 @@ Connections can only be made between two predefined zones.",
 
     @staticmethod
     def _check_valid_metadata(metadata: str) -> bool:
+        """Check that a metadata token contains exactly one '='.
+ 
+        Args:
+            metadata: A single metadata token, e.g. '[zone=priority'.
+ 
+        Returns:
+            True if the number of '=' characters is odd.
+        """
         valid = False
         for c in metadata:
             if c == "=":
@@ -369,10 +431,23 @@ Connections can only be made between two predefined zones.",
         return valid
 
     def _check_duplicate_connections(self, zones: list[Zone]) -> bool:
+        """Tell whether a connection between two zones was already seen.
+ 
+        Args:
+            zones: The two endpoints; order does not matter.
+ 
+        Returns:
+            True if the pair is already in 'seen_connections'.
+        """
         key = frozenset({zones[0].name, zones[1].name})
         return key in self.seen_connections
 
     def print(self, network: Network) -> None:
+        """Print a readable summary of a parsed network (debugging).
+ 
+        Args:
+            network: The network to display.
+        """
         print(f"nb_drones: '{network.nb_drones}'")
         print("\nZones:")
         for zone in network.zones:

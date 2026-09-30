@@ -66,7 +66,7 @@ class SimulationError(Exception):
         Args:
             msg (str): Message to display if the error happens
         """
-        super().__init__(f"ParseError: {msg}")
+        super().__init__(f"SimulationError: {msg}")
 
 
 class VisualizationError(Exception):

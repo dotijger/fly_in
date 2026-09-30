@@ -1,6 +1,6 @@
 from src.parser import Parser
 from src.simulation import Simulation
-from src.visual_clean import Visualizer
+from src.visual import Visualizer
 from src.error import ParseError, PathError, SimulationError
 from pathlib import Path
 import sys
@@ -23,11 +23,3 @@ if __name__ == "__main__":
     except (ParseError, ValueError, PathError, SimulationError) as e:
         print(e)
         sys.exit(1)
-
-        # for map in maps:
-        # print("\n")
-        #   print(f"Running simulation on map: '{map.name}'")
-        #    print("\nImported map information: \n")
-        #    parse.print(map)
-        #   sim = Simulation(map=map, logger=logger)
-        #   sim.run()
