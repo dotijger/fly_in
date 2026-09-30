@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class TurnResolver(BaseModel):
     """Applies one turn of movement rules to a set of drones.
- 
+
     Attributes:
         zone_by_name: Lookup of zone name -> Zone.
         connection_by_name: Lookup of (a, b) name pair -> Connection.
@@ -15,23 +15,23 @@ class TurnResolver(BaseModel):
 
     def resolve(self, drones: list[Drone], turn: int) -> Record:
         """Advance all drones by one turn while respecting capacities.
- 
-        Order of resolution: 
+
+        Order of resolution:
         1) drones finishing a transit land first
         2) drones still mid-transit advance
-        3) drones standing in a zone try to step to their next hub 
-            (entering a transit if it isrestricted). 
-        
+        3) drones standing in a zone try to step to their next hub
+            (entering a transit if it isrestricted).
+
         Drones blocked by zone or link capacity wait.
         Drones and their paths are mutated in place.
- 
+
         Args:
             drones: Every drone in the simulation.
             turn: The turn number being resolved.
- 
+
         Returns:
             The movements performed this turn.
- 
+
         Raises:
             SimulationError: If a drone's state is inconsistent (no next
                 hub, no transit connection, or no link to its next hub).

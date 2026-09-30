@@ -7,7 +7,7 @@ from src.resolver import TurnResolver
 
 class Simulation(BaseModel):
     """Runs every drone of a network from start to end, logging each turn.
- 
+
     Attributes:
         - map: The network to simulate.
         - zone_by_name: Lookup of zone name -> Zone.
@@ -25,7 +25,7 @@ class Simulation(BaseModel):
 
     def _setup(self) -> None:
         """Build lookups, compute the route and spawn drones at the start.
- 
+
         Raises:
             SimulationError: If the map has no start hub or the path
                 references an unknown zone.
@@ -57,10 +57,10 @@ class Simulation(BaseModel):
 
     def unpacked_path(self) -> list[Zone]:
         """Convert 'self.path' into the matching list of Zone objects.
- 
+
         Returns:
             Zones along the route, start hub first.
- 
+
         Raises:
             SimulationError: If a path entry has no registered zone.
         """
@@ -76,7 +76,7 @@ class Simulation(BaseModel):
 
     def run(self) -> list[Record]:
         """Simulate turns until every drone has arrived.
- 
+
         Returns:
             The per-turn movement log.
         """

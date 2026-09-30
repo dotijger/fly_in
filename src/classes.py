@@ -12,7 +12,7 @@ class HubType(Enum):
 
 class Zone(BaseModel):
     """A node of the network that drones can occupy.
- 
+
     Attributes:
         - kind: 1 for the start hub, -1 for the end hub, 0 otherwise.
         - name: Unique zone name (no dashes or spaces).
@@ -37,10 +37,10 @@ class Zone(BaseModel):
     @model_validator(mode="after")
     def check(self) -> Self:
         """Apply metadata and validate the zone after construction.
- 
+
         Returns:
             The validated zone.
- 
+
         Raises:
             ValueError: If the name contains a dash or space, or the
                 metadata is invalid.
@@ -57,9 +57,9 @@ class Zone(BaseModel):
 
     def _extract_metadata(self) -> None:
         """Parse self.metadata into color, max_drones, zone_type, cost.
- 
+
         Unknown keys are ignored.
- 
+
         Raises:
             ValueError: If max_drones is not a positive integer or the
                 zone type is not recognised.
@@ -105,7 +105,7 @@ valid zone type.\nAllowed: 'normal', 'priority', 'blocked', 'restricted'."
 
 class Connection(BaseModel):
     """A bidirectional connection between two zones.
- 
+
     Attributes:
         - a: First endpoint.
         - b: Second endpoint.
@@ -119,10 +119,10 @@ class Connection(BaseModel):
 
     def other(self, place: Zone) -> Zone | None:
         """Return the hub opposite of 'place'.
- 
+
         Args:
             place: One of the connection's hubs.
- 
+
         Returns:
             The other hub, or None if 'place' does not exist in this link.
         """
@@ -145,7 +145,7 @@ class DroneStatus(str, Enum):
 
 class Drone(BaseModel):
     """A single drone and its progress along its route.
- 
+
     Attributes:
         - id: Identifier such as 'D1'.
         - current: Zone the drone is in (or departed from while in transit).
@@ -167,7 +167,7 @@ class Drone(BaseModel):
 
     def start_transit(self, connection: Connection, cost: int) -> None:
         """Put the drone on a connection for a move costing >1 turn.
- 
+
         Args:
             - connection: The link being entered.
             - cost: Total turns the move takes (including this one).
@@ -185,7 +185,7 @@ class Drone(BaseModel):
 
 class Movement(BaseModel):
     """One drone move within a turn.
- 
+
     Attributes:
         - drone_id: Identifier of the moving drone.
         - destination: Zone or connection name the drone moved to.
@@ -196,7 +196,7 @@ class Movement(BaseModel):
 
 class Record(BaseModel):
     """All movements that happened during one simulation turn.
- 
+
     Attributes:
         - number: Turn number, starting at 1.
         - movements: Moves made this turn.
@@ -214,7 +214,7 @@ class Record(BaseModel):
 
 class Network(BaseModel):
     """A fully parsed map.
- 
+
     Attributes:
         - name: Map file name.
         - nb_drones: Number of drones to route.

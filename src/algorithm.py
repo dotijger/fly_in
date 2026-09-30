@@ -6,7 +6,7 @@ from heapq import heapify, heappop, heappush
 
 class PathFinder(BaseModel):
     """Finds the cheapest route from the start hub to the end hub.
- 
+
     Attributes:
         map: The parsed network to search.
         graph: Adjacency map of zone name -> {neighbor name: entry cost},
@@ -17,7 +17,7 @@ class PathFinder(BaseModel):
 
     def _create_graph(self) -> None:
         """Build ``self.graph`` from the network's zones and connections.
- 
+
         Blocked zones are excluded both as nodes and as neighbors. Edge
         weights are the cost of entering the neighbor zone.
         """
@@ -49,11 +49,11 @@ class PathFinder(BaseModel):
 
     def dijkstra(self) -> dict[str, float]:
         """Compute the cheapest cost from the start hub to every zone.
- 
+
         Returns:
             Mapping of zone name to its minimal cost from the start hub;
             unreachable zones keep path cost of infinity.
- 
+
         Raises:
             PathError: If the map has no start or end hub, or if the end
                 hub is unreachable.
@@ -105,11 +105,11 @@ aborting."
 
     def run(self) -> list[tuple[str, int]]:
         """Build the graph, run Dijkstra and reconstruct one cheapest path.
- 
+
         Returns:
             The path from start to end as (zone name, cost to enter) pairs;
             the first entry is the start hub with cost 0.
- 
+
         Raises:
             PathError: If the map has no end hub or it is unreachable.
         """
