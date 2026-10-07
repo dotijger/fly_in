@@ -130,7 +130,7 @@ class Visualizer:
             ``(pair id, curses attribute)``.
         """
         _, attr = self.COLOR_MAP.get(color, self.DEFAULT_COLOR)
-        pair_id = self.PAIR_MAP[color]
+        pair_id = self.PAIR_MAP.get(color, 0)
         return (pair_id, attr)
 
     def draw_menu(self, stdscr: curses.window) -> Screen:

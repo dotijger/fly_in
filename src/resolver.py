@@ -135,6 +135,7 @@ not found, aborting."
                 )
                 available_link[next_connection.name] -= 1
                 available_hub[d.current.name] += 1
+                available_hub[next.name] -= 1
                 record.movements.append(
                     Movement(drone_id=d.id, destination=next_connection.name)
                 )

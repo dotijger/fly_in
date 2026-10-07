@@ -32,7 +32,7 @@ class PathFinder(BaseModel):
                     if next.zone_type == "blocked":
                         continue
                     neighbors[next.name] = next.cost
-                graph[zone.name] = neighbors
+            graph[zone.name] = neighbors
         self.graph = graph
 
     def print_graph(self) -> None:
@@ -96,7 +96,7 @@ aborting."
                     distances[neighbor] = new_cost
                     heappush(pq, (new_cost, neighbor))
 
-        if distances[end] == float("inf"):
+        if distances.get(end, float("inf")) == float("inf"):
             raise PathError(
                 f"Goal hub '{end}' is not reachable from start in \
 '{self.map.name}'."

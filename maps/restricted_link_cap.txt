@@ -1,0 +1,6 @@
+nb_drones: 2
+start_hub: start 0 0
+hub: r 1 0 [zone=restricted]
+end_hub: goal 2 0
+connection: start-r [max_link_capacity=2]
+connection: r-goal

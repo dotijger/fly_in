@@ -74,11 +74,6 @@ class Zone(BaseModel):
             if attribute.startswith("color="):
                 self.color = attribute.removeprefix("color=").strip()
             elif attribute.startswith("max_drones="):
-                if attribute.removeprefix("max_drones=") == "0":
-                    raise ValueError(
-                        f"zone '{self.name}' cannot have a max capacity \
-of 0 drones."
-                    )
                 try:
                     self.max_drones = int(
                         attribute.removeprefix("max_drones=").strip()
@@ -87,9 +82,10 @@ of 0 drones."
                     raise ValueError(
                         f"max drones in {self.name} is not an integer."
                     )
-                if self.max_drones < 0:
+                if self.max_drones < 1:
                     raise ValueError(
-                        f"max drones of zone {self.name} cannot be negative."
+                        f"max drones of zone {self.name}\
+must be a positive integer."
                     )
             elif attribute.startswith("zone="):
                 self.zone_type = attribute.removeprefix("zone=").strip()
