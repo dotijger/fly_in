@@ -142,8 +142,8 @@ class Visualizer:
         Returns:
             MAP_SELECT when "start" is chosen, QUIT otherwise.
         """
-        options = ["quit", "start"]
-        selected = 1
+        options = ["start", "quit"]
+        selected = 0
         screen_height, screen_width = stdscr.getmaxyx()
         center_y = screen_height // 2
         center_x = screen_width // 2
@@ -158,7 +158,7 @@ class Visualizer:
                     curses.A_REVERSE if i == selected else curses.A_NORMAL
                 )
                 x = title_x + len(title) // 4
-                stdscr.addstr(center_y - i, x, f"[ {label} ]", attribute)
+                stdscr.addstr(center_y + i, x, f"[ {label} ]", attribute)
             stdscr.refresh()
 
             key = stdscr.getch()
@@ -167,7 +167,7 @@ class Visualizer:
             elif key == curses.KEY_DOWN:
                 selected = (selected + 1) % len(options)
             elif key in (curses.KEY_ENTER, 10, 13):
-                return Screen.MAP_SELECT if selected != 0 else Screen.QUIT
+                return Screen.MAP_SELECT if selected == 0 else Screen.QUIT
             elif key in (27, ord("q")):
                 return Screen.QUIT
 

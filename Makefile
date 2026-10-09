@@ -5,12 +5,12 @@ MYPY_FLAGS= --warn-return-any \
 						--check-untyped-defs
 SRC_DIR= src
 
-all: install run
+all: run
 
 install:
 	uv sync
 
-run:
+run: install
 	uv run python3 -m $(SRC_DIR)
 
 debug:
