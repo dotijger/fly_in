@@ -13,7 +13,75 @@ class TurnResolver(BaseModel):
     zone_by_name: dict[str, Zone]
     connection_by_name: dict[tuple[str, str], Connection]
 
+    def _can_enter(self, a: Zone, b: Zone) -> bool:
+        """Checks whether this turn the move from a->b is possible.
+
+        Returns:
+            True if the move is possible
+            False if the move is not possible
+        """
+
+    def _choose_move(self, drone: Drone, h: dict[str, float]) -> str | None:
+        """Pick best available next zone, or None if waiting = best option.
+        
+        Args:
+            drone: The drone deciding its move this turn
+            h: remaining cost from each zone to the end hub
+
+        Returns:
+            Name of the zone to move into, or None if waiting is
+            at least as good as every available move (following the
+            dijkstra computed cheapest route)
+        """
+
     def resolve(self, drones: list[Drone], turn: int) -> Record:
+        """Advance all drones by one turn while respecting capacities.
+
+        Order of resolution:
+        1) drones finishing a transit land first
+        2) drones still mid-transit advance
+        3) drones standing in a zone try to step to their next hub
+            (entering a transit if it is not restricted)
+        Drones blocked by zone or link capacity wait.
+        Drones and their paths are mutated in place.
+
+        Args:
+            drones: Every drone in the simulation.
+            turn: The turn number being resolved.
+
+        Returns:
+            The movements performed this turn.
+
+        Raises:
+            SimulationError: If a drone's state is inconsistent (no next
+                hub, no transit connection, or no link to its next hub).
+        """
+        record = Record(number=turn)
+        in_transit_drones = [
+            d for d in drones if d.status == DroneStatus.IN_TRANSIT
+        ]
+        proposing_drones = [
+            d for d in drones if d.status == DroneStatus.AT_ZONE
+        ]
+        
+        available_hub: dict[str, int] = {}
+        for zone in self.zone_by_name.values():
+            drone_count = 0
+            for d in drones:
+                if (
+                    d.current.name == zone.name
+                    and d.status != DroneStatus.ARRIVED
+                ):
+                    drone_count += 1
+            available_hub[zone.name] = zone.max_drones - drone_count
+
+        available_link: dict[str, int] = {}
+        for connection in self.connection_by_name.values():
+            available_link[connection.name] = connection.max_link_capacity       
+
+        return record
+
+    def old_resolve(self, drones: list[Drone], turn: int) -> Record:
         """Advance all drones by one turn while respecting capacities.
 
         Order of resolution:

@@ -1,7 +1,7 @@
 from src.classes import Network
 from src.error import PathError
 from pydantic import BaseModel
-from heapq import heapify, heappop, heappush
+from heapq import heappop, heappush
 
 
 class PathFinder(BaseModel):
@@ -47,9 +47,19 @@ class PathFinder(BaseModel):
         """dict[str, dict[str, int]]: current adjacency map"""
         return self.graph
 
-    def distances_to_goal(self, end: str) -> dict[str, float]:
-        """Cheapest cost from every zone to the end hub.
-            Used to calculate next best route when route is taken.
+    def backward_dijkstra(self, end: str) -> dict[str, float]:
+        """Compute the cheapest cost from every zone to the end hub.
+
+        Runs Dijkstra backwards from the goal. Edge weights are read as
+        graph[neighbor][hub], the cost of entering the zone being expanded,
+        so each value reflects the real direction of travel.
+
+        Args:
+            end: Name of the end hub.
+
+        Returns:
+            Mapping of zone name to remaining cost to reach end;
+            unreachable zones map to infinity.
         """
         distances = {hub: float("inf") for hub in self.graph}
         distances[end] = 0
@@ -68,7 +78,7 @@ class PathFinder(BaseModel):
         return distances
 
 
-    def dijkstra(self) -> dict[str, float]:
+    def forward_dijkstra(self) -> dict[str, float]:
         """Compute the cheapest cost from the start hub to every zone.
 
         Returns:
@@ -98,9 +108,8 @@ aborting."
         distances = {hub: float("inf") for hub in self.graph}
         distances[start] = 0
 
-        pq = [(0, start)]
-        heapify(pq)
-        visited = set()
+        pq: list[tuple[float, str]] = [(0, start)]
+        visited: set[str] = set()
 
         while pq:
             current_cost, current_hub = heappop(pq)
@@ -124,7 +133,27 @@ aborting."
             )
         return distances
 
-    def run(self) -> list[tuple[str, int]]:
+    def run(self) -> dict[str, float]:
+        """Build the graph, run backward Dijkstra and
+        return a dict with zone, cost where cost resembles
+        the cost to the end hub from each respective zone.
+
+        Returns:
+            Information for the resolver: the cost from
+            each hub to the end hub.
+
+        Raises:
+            PathError: if the map has no end hub or it is unreachable.
+
+        """
+        self._create_graph()
+        try:
+            h = self.backward_dijkstra()
+        except PathError as e:
+            raise PathError(e)
+        return h
+
+    def old_run(self) -> list[tuple[str, int]]:
         """Build the graph, run Dijkstra and reconstruct one cheapest path.
 
         Returns:
@@ -135,7 +164,7 @@ aborting."
             PathError: If the map has no end hub or it is unreachable.
         """
         self._create_graph()
-        distances = self.dijkstra()
+        distances = self.forward_dijkstra()
         came_from = {hub: "" for hub in self.graph}
 
         for hub, cost in distances.items():
