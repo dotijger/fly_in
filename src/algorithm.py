@@ -47,6 +47,27 @@ class PathFinder(BaseModel):
         """dict[str, dict[str, int]]: current adjacency map"""
         return self.graph
 
+    def distances_to_goal(self, end: str) -> dict[str, float]:
+        """Cheapest cost from every zone to the end hub.
+            Used to calculate next best route when route is taken.
+        """
+        distances = {hub: float("inf") for hub in self.graph}
+        distances[end] = 0
+        pq: list[tuple[float, str]] = [(0, end)]
+        visited: set[str] = set()
+        while pq:
+            cost, hub = heappop(pq)
+            if hub in visited:
+                continue
+            visited.add(hub)
+            for neighbor in self.graph[hub]:
+                new_cost = cost + self.graph[neighbor][hub]
+                if new_cost < distances[neigbor]:
+                    distances[neighbor] = new_cost
+                    heappush(pq, (new_cost, neighbor))
+        return distances
+
+
     def dijkstra(self) -> dict[str, float]:
         """Compute the cheapest cost from the start hub to every zone.
 
