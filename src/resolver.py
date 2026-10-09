@@ -1,27 +1,71 @@
 from src.classes import Zone, Connection, Drone, Record, DroneStatus, Movement
 from src.error import SimulationError
-from pydantic import BaseModel
 
-
-class TurnResolver(BaseModel):
+class TurnResolver():
     """Applies one turn of movement rules to a set of drones.
 
     Attributes:
         zone_by_name: Lookup of zone name -> Zone.
         connection_by_name: Lookup of (a, b) name pair -> Connection.
+        end: End Zone of this map
+        graph: Look up table for all connections for each zone
+        cost_to_goal: backward Dijkstra (cost to goal hub from each zone)
+        occupancy: Bookkeeping for each zone's occupancy
+        incoming: Bookkeeping for each restricted zone's incoming
+        link_usage: Bookkeeping for each connection usage
     """
-    zone_by_name: dict[str, Zone]
-    connection_by_name: dict[tuple[str, str], Connection]
+    def __init__(self,
+                zone_by_name: dict[str, Zone],
+                connection_by_name: dict[tuple[str, str], Connection],
+                end: Zone,
+                graph: dict[str, dict[str, int]],
+                cost_to_goal: dict[str, float],
+                 )
+        self.zone_by_name = zone_by_name
+        self.connection_by_name = connection_by_name
+        self.end = end
+        self.graph = graph
+        self.cost_to_goal = cost_to_goal
+        self.occupancy: dict[str, int] = {z: 0 for z in zone_by_name.keys()}
+        self.incoming: dict[str, int] = {z: 0 for z in zone_by_name.keys()}
+        self.link_usage: dict[Connection, int] = {c: 0 for c in connection_by_name.values()}
 
-    def _can_enter(self, a: Zone, b: Zone) -> bool:
+    @property
+    def capacity(self, a: str) -> int:
+        zone = zone_by_name.get(a)
+        if not zone:
+            raise SimulationError(
+                    f"{a} not found in zones in TurnResolver.")
+        return zone.max_drones
+
+    def _get_connection(self, a: str, b: str) -> Connection | None:
+        if self.connection_by_name.get((a, b)) is None:
+            if self.connection_by_name.get((b, a)) is None:
+                return None
+            return self.connection_by_name.get((b, a))
+        return self.connection_by_name.get((a, b))
+
+    def _can_enter(self, current: str, nxt: str) -> bool:
         """Checks whether this turn the move from a->b is possible.
 
         Returns:
             True if the move is possible
             False if the move is not possible
         """
+        c = self._get_connection(current, nxt)
+        if not c:
+            raise SimulationError(
+                    f"Unknown connection {current} - {nxt} in TurnResolver"
+                    "Exiting program.")
+        if self.link_usage[c] >= c.max_link_capacity:
+            return False
+        if nxt == self.end:
+            return True
+        if self.is_restricted(nxt):
+            return self.occupancy[nxt] + self.incoming[nxt] < self.capacity[nxt]
+        return self.occupancy[nxt] < self.capacity[nxt]
 
-    def _choose_move(self, drone: Drone, h: dict[str, float]) -> str | None:
+    def _choose_move(self, drone: Drone) -> str | None:
         """Pick best available next zone, or None if waiting = best option.
         
         Args:
@@ -33,6 +77,17 @@ class TurnResolver(BaseModel):
             at least as good as every available move (following the
             dijkstra computed cheapest route)
         """
+        current = drone.current
+        pick: str | None = None
+        best_cost = 1 + self.cost_to_goal[current]
+        for nxt, cost in self.graph[current].items():
+            if not self._can_enter(current, nxt):
+                continue
+            total_cost = cost + self.cost_to_goal[nxt]
+            if total <= best_cost:
+                pick = nxt
+                best_cost = total
+        return pick
 
     def resolve(self, drones: list[Drone], turn: int) -> Record:
         """Advance all drones by one turn while respecting capacities.
@@ -63,21 +118,23 @@ class TurnResolver(BaseModel):
         proposing_drones = [
             d for d in drones if d.status == DroneStatus.AT_ZONE
         ]
-        
-        available_hub: dict[str, int] = {}
-        for zone in self.zone_by_name.values():
-            drone_count = 0
-            for d in drones:
-                if (
-                    d.current.name == zone.name
-                    and d.status != DroneStatus.ARRIVED
-                ):
-                    drone_count += 1
-            available_hub[zone.name] = zone.max_drones - drone_count
+        for d in in_transit_drones:
+            move = self._choose_move(d)
+            if move:
+                self.occupancy[move] += 1
+                self.incoming[d.current] -= 1
+                self.link_usage[d.transit_connection] -= 1
+                d.stop_transit()
 
-        available_link: dict[str, int] = {}
-        for connection in self.connection_by_name.values():
-            available_link[connection.name] = connection.max_link_capacity       
+        for d in proposing_drones:
+            move = self._choose_move(d)
+            if move:
+                if self.zone_by_name.get(move).zone_type == "restricted":
+                    d.start_transit()
+                    self.incoming[move] += 1
+                else:
+                    self.occupancy[move] += 1
+                self.link_usage[self._get_connection(d.current.name, move)] += 1
 
         return record
 
